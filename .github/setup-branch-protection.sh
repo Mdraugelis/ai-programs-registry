@@ -32,14 +32,26 @@ gh api \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   "/repos/$REPO/branches/main/protection" \
-  -f required_status_checks='{"strict":true,"contexts":["test (3.11)","test (3.12)","security-scan","build-validation"]}' \
-  -f enforce_admins=false \
-  -f required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":false,"require_last_push_approval":false}' \
-  -f restrictions=null \
-  -f allow_force_pushes=false \
-  -f allow_deletions=false \
-  -f block_creations=false \
-  -f required_conversation_resolution=true
+  --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["test (3.11)", "test (3.12)", "security-scan", "build-validation"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "require_last_push_approval": false
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": true
+}
+EOF
 
 echo "✅ Branch protection rules configured successfully!"
 

@@ -19,5 +19,5 @@ cd ai-atlas
 pip install -r requirements.txt
 python app.py
 # Navigate to http://localhost:8000
-
+```
 Built with ❤️ by Geisinger AI Team for healthcare AI governance.

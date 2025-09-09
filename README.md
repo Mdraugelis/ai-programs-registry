@@ -1,4 +1,4 @@
-# AI Atlas (or GAIA/ai-deck)
+# AI Atlas
 
 A lightweight web application for cataloging, tracking, and reporting on AI initiatives across Geisinger Health System. Built to replace Microsoft Lists with a purpose-built solution that enforces AI governance requirements and enables executive visibility.
 

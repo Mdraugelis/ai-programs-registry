@@ -84,8 +84,8 @@ const mapToBackendInitiative = (initiative: Omit<Initiative, 'id' | 'created_at'
     lead_email: initiative.created_by,
     business_value: initiative.goal,
     technical_approach: `${initiative.approach_workflow || ''}\n\n${initiative.approach_technical || ''}`.trim(),
-    start_date: null,
-    end_date: null,
+    start_date: undefined,
+    end_date: undefined,
     status: 'active'
   };
 };
@@ -236,7 +236,7 @@ export const initiativesAPI = {
     Object.keys(backendData).forEach(key => {
       const value = backendData[key as keyof BackendInitiativeCreate];
       if (value !== undefined && value !== null && value !== '') {
-        updateData[key as keyof BackendInitiativeCreate] = value;
+        (updateData as any)[key] = value;
       }
     });
     

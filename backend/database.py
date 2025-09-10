@@ -1,13 +1,19 @@
 import sqlite3
-import psycopg2
-import psycopg2.extras
 from contextlib import contextmanager
 import os
 from typing import Optional
 
+# Only import psycopg2 in production
+try:
+    import psycopg2
+    import psycopg2.extras
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+
 # Check if we're in production (Railway sets DATABASE_URL)
 DATABASE_URL = os.getenv("DATABASE_URL")
-IS_PRODUCTION = DATABASE_URL is not None
+IS_PRODUCTION = DATABASE_URL is not None and PSYCOPG2_AVAILABLE
 
 if not IS_PRODUCTION:
     DATABASE_PATH = os.path.join(os.path.dirname(__file__), "database.db")

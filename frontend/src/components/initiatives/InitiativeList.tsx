@@ -159,7 +159,7 @@ const InitiativeList: React.FC = () => {
       <AIChatPanel
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
-        initiativeIds={paginatedInitiatives.map(init => init.id)}
+        initiativeIds={paginatedInitiatives.map(init => Number(init.id))}
       />
       </Stack>
     </div>

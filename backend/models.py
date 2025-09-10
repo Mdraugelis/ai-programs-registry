@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 # Database table schemas as SQL
@@ -46,6 +46,18 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT CHECK(role IN ('admin', 'reviewer', 'contributor')) DEFAULT 'contributor',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP
+)
+"""
+
+USER_API_KEYS_TABLE = """
+CREATE TABLE IF NOT EXISTS user_api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT UNIQUE NOT NULL,
+    encrypted_claude_key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used TIMESTAMP,
+    usage_count INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users (username)
 )
 """
 
@@ -123,3 +135,29 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+# Chat-related models
+class ChatRequest(BaseModel):
+    query: str
+    initiative_ids: Optional[list[int]] = []
+
+class ChatResponse(BaseModel):
+    response: str
+
+class ChatSetupRequest(BaseModel):
+    api_key: str
+
+class ChatStatusResponse(BaseModel):
+    connected: bool
+    needs_setup: bool
+    model: Optional[str] = None
+
+class UserAPIKey(BaseModel):
+    id: int
+    user_id: str
+    created_at: datetime
+    last_used: Optional[datetime] = None
+    usage_count: int = 0
+    
+    class Config:
+        from_attributes = True

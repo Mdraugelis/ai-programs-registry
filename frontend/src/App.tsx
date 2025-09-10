@@ -25,28 +25,35 @@ const theme = createTheme({
 });
 
 function App() {
-  return (
-    <MantineProvider theme={theme}>
-      <Notifications />
-      <AuthProvider>
-        <InitiativesProvider>
-          <FiltersProvider>
-            <Router>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/initiatives" replace />} />
-                  <Route path="/initiatives" element={<InitiativeList />} />
-                  <Route path="/initiatives/new" element={<IntakeForm />} />
-                  <Route path="/initiatives/:id" element={<InitiativeDetail />} />
-                  <Route path="/initiatives/:id/edit" element={<IntakeForm />} />
-                </Routes>
-              </Layout>
-            </Router>
-          </FiltersProvider>
-        </InitiativesProvider>
-      </AuthProvider>
-    </MantineProvider>
-  );
+  console.log('App component rendering...');
+  
+  try {
+    return (
+      <MantineProvider theme={theme}>
+        <Notifications />
+        <AuthProvider>
+          <InitiativesProvider>
+            <FiltersProvider>
+              <Router>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/initiatives" replace />} />
+                    <Route path="/initiatives" element={<InitiativeList />} />
+                    <Route path="/initiatives/new" element={<IntakeForm />} />
+                    <Route path="/initiatives/:id" element={<InitiativeDetail />} />
+                    <Route path="/initiatives/:id/edit" element={<IntakeForm />} />
+                  </Routes>
+                </Layout>
+              </Router>
+            </FiltersProvider>
+          </InitiativesProvider>
+        </AuthProvider>
+      </MantineProvider>
+    );
+  } catch (error) {
+    console.error('Error in App component:', error);
+    return <div style={{ padding: '20px', background: 'red', color: 'white' }}>Error in App: {String(error)}</div>;
+  }
 }
 
 export default App;

@@ -3,7 +3,7 @@ import sqlite3
 import os
 from passlib.context import CryptContext
 from database import DATABASE_PATH, get_db
-from models import INITIATIVES_TABLE, DOCUMENTS_TABLE, USERS_TABLE
+from models import INITIATIVES_TABLE, DOCUMENTS_TABLE, USERS_TABLE, USER_API_KEYS_TABLE
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -20,6 +20,7 @@ def init_database():
         cursor.execute(INITIATIVES_TABLE)
         cursor.execute(DOCUMENTS_TABLE)
         cursor.execute(USERS_TABLE)
+        cursor.execute(USER_API_KEYS_TABLE)
         
         # Create indexes for better performance
         cursor.execute("""
@@ -37,6 +38,10 @@ def init_database():
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_initiative 
             ON documents(initiative_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_api_keys_user_id 
+            ON user_api_keys(user_id)
         """)
         
         # Check if users already exist

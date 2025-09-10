@@ -1,5 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Table,
+  Paper,
+  Badge,
+  ActionIcon,
+  Group,
+  Text,
+  Anchor,
+  ScrollArea,
+  Center,
+  Stack,
+  Button,
+  UnstyledButton,
+  rem
+} from '@mantine/core';
+import { 
+  IconEdit, 
+  IconEye, 
+  IconChevronUp, 
+  IconChevronDown, 
+  IconSelector,
+  IconFileDescription
+} from '@tabler/icons-react';
 import type { Initiative } from '../../types/initiative';
 import { useFilters } from '../../contexts/FiltersContext';
 
@@ -20,200 +43,210 @@ const InitiativeTable: React.FC<InitiativeTableProps> = ({ initiatives }) => {
 
   const SortIcon: React.FC<{ field: keyof Initiative }> = ({ field }) => {
     if (sort.field !== field) {
-      return (
-        <svg className="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
+      return <IconSelector style={{ width: rem(16), height: rem(16) }} stroke={1.5} color="var(--mantine-color-dimmed)" />;
     }
     
     return sort.direction === 'asc' ? (
-      <svg className="w-4 h-4 ml-1 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
+      <IconChevronUp style={{ width: rem(16), height: rem(16) }} stroke={1.5} color="var(--mantine-color-blue-6)" />
     ) : (
-      <svg className="w-4 h-4 ml-1 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
+      <IconChevronDown style={{ width: rem(16), height: rem(16) }} stroke={1.5} color="var(--mantine-color-blue-6)" />
     );
   };
 
-  const getStageColor = (stage: string) => {
-    switch (stage) {
-      case 'idea':
-        return 'bg-gray-100 text-gray-800';
-      case 'proposal':
-        return 'bg-blue-100 text-blue-800';
-      case 'pilot':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'production':
-        return 'bg-green-100 text-green-800';
-      case 'retired':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Professional status badge color mapping following Mantine design system
+  const STATUS_COLORS = {
+    'idea': 'gray',
+    'proposal': 'blue', 
+    'pilot': 'pink',
+    'production': 'green',
+    'retired': 'dark'
+  } as const;
 
-  const getRiskColor = (risks?: string) => {
-    if (!risks) return 'bg-gray-100 text-gray-800';
+  const getRiskColor = (risks?: string): 'green' | 'yellow' | 'orange' | 'red' | 'gray' => {
+    if (!risks) return 'gray';
     
     const riskLevel = risks.toLowerCase();
-    if (riskLevel.includes('high')) {
-      return 'bg-red-100 text-red-800';
-    } else if (riskLevel.includes('medium')) {
-      return 'bg-yellow-100 text-yellow-800';
+    if (riskLevel.includes('high') || riskLevel.includes('critical')) {
+      return 'red';
+    } else if (riskLevel.includes('medium') || riskLevel.includes('moderate')) {
+      return 'orange';
     } else if (riskLevel.includes('low')) {
-      return 'bg-green-100 text-green-800';
+      return 'green';
     }
-    return 'bg-gray-100 text-gray-800';
+    return 'gray';
+  };
+
+  const getRiskLabel = (risks?: string): string => {
+    if (!risks) return 'Unknown';
+    
+    const riskLevel = risks.toLowerCase();
+    if (riskLevel.includes('high')) return 'High';
+    if (riskLevel.includes('critical')) return 'Critical';
+    if (riskLevel.includes('medium')) return 'Medium';
+    if (riskLevel.includes('moderate')) return 'Moderate';
+    if (riskLevel.includes('low')) return 'Low';
+    
+    return risks.split(' ')[0] || 'Unknown';
   };
 
   if (initiatives.length === 0) {
     return (
-      <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-        <svg
-          className="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No initiatives found</h3>
-        <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filters</p>
-        <div className="mt-6">
-          <Link
-            to="/initiatives/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-          >
-            Create your first initiative
-          </Link>
-        </div>
-      </div>
+      <Paper p="xl" withBorder>
+        <Center>
+          <Stack align="center" gap="md">
+            <IconFileDescription size={48} stroke={1.5} color="var(--mantine-color-dimmed)" />
+            <div>
+              <Text size="lg" fw={500} ta="center">No initiatives found</Text>
+              <Text size="sm" c="dimmed" ta="center" mt={4}>
+                Try adjusting your search or filters
+              </Text>
+            </div>
+          </Stack>
+        </Center>
+      </Paper>
     );
   }
 
+  const Th: React.FC<{ 
+    children: React.ReactNode; 
+    field?: keyof Initiative; 
+    sortable?: boolean;
+  }> = ({ children, field, sortable = true }) => {
+    return (
+      <Table.Th>
+        {sortable && field ? (
+          <UnstyledButton 
+            onClick={() => handleSort(field)}
+            style={{
+              width: '100%',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: rem(4)
+            }}
+          >
+            <Text size="xs" fw={500} tt="uppercase" c="dimmed">
+              {children}
+            </Text>
+            <SortIcon field={field} />
+          </UnstyledButton>
+        ) : (
+          <Text size="xs" fw={500} tt="uppercase" c="dimmed">
+            {children}
+          </Text>
+        )}
+      </Table.Th>
+    );
+  };
+
+  const rows = initiatives.map((initiative) => (
+    <Table.Tr key={initiative.id}>
+      <Table.Td style={{ verticalAlign: 'top', minWidth: rem(200) }}>
+        <div>
+          <Anchor 
+            component={Link} 
+            to={`/initiatives/${initiative.id}`}
+            fw={500}
+            size="sm"
+            lineClamp={2}
+          >
+            {initiative.title}
+          </Anchor>
+          <Text 
+            size="xs" 
+            c="dimmed" 
+            lineClamp={2}
+            mt={2}
+            style={{ maxWidth: rem(300) }}
+            title={initiative.background}
+          >
+            {initiative.background || 'No description'}
+          </Text>
+        </div>
+      </Table.Td>
+      
+      <Table.Td>
+        <Text size="sm">{initiative.program_owner}</Text>
+      </Table.Td>
+      
+      <Table.Td>
+        <Text size="sm" c="dimmed">{initiative.department}</Text>
+      </Table.Td>
+      
+      <Table.Td>
+        <Badge 
+          color={STATUS_COLORS[initiative.stage as keyof typeof STATUS_COLORS] || 'gray'}
+          variant="light"
+          size="sm"
+          tt="capitalize"
+        >
+          {initiative.stage}
+        </Badge>
+      </Table.Td>
+      
+      <Table.Td>
+        <Badge 
+          color={getRiskColor(initiative.risks)}
+          variant="light"
+          size="sm"
+        >
+          {getRiskLabel(initiative.risks)}
+        </Badge>
+      </Table.Td>
+      
+      <Table.Td>
+        <Text size="sm" c="dimmed">
+          {new Date(initiative.updated_at).toLocaleDateString()}
+        </Text>
+      </Table.Td>
+      
+      <Table.Td>
+        <Group gap={8} justify="flex-end">
+          <ActionIcon
+            variant="subtle"
+            color="blue"
+            size="sm"
+            component={Link}
+            to={`/initiatives/${initiative.id}/edit`}
+            title="Edit initiative"
+          >
+            <IconEdit style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
+          </ActionIcon>
+          
+          <ActionIcon
+            variant="subtle"
+            color="blue"
+            size="sm"
+            component={Link}
+            to={`/initiatives/${initiative.id}`}
+            title="View initiative"
+          >
+            <IconEye style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
+          </ActionIcon>
+        </Group>
+      </Table.Td>
+    </Table.Tr>
+  ));
+
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('title')}
-              >
-                <div className="flex items-center">
-                  Title
-                  <SortIcon field="title" />
-                </div>
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('program_owner')}
-              >
-                <div className="flex items-center">
-                  Owner
-                  <SortIcon field="program_owner" />
-                </div>
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('department')}
-              >
-                <div className="flex items-center">
-                  Department
-                  <SortIcon field="department" />
-                </div>
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('stage')}
-              >
-                <div className="flex items-center">
-                  Stage
-                  <SortIcon field="stage" />
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Risk
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('updated_at')}
-              >
-                <div className="flex items-center">
-                  Updated
-                  <SortIcon field="updated_at" />
-                </div>
-              </th>
-              <th className="relative px-6 py-3">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {initiatives.map((initiative) => (
-              <tr key={initiative.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="text-sm">
-                    <Link
-                      to={`/initiatives/${initiative.id}`}
-                      className="font-medium text-primary-600 hover:text-primary-700"
-                    >
-                      {initiative.title}
-                    </Link>
-                    <div className="text-gray-500 truncate max-w-xs" title={initiative.background}>
-                      {initiative.background || 'No description'}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {initiative.program_owner}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {initiative.department}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStageColor(initiative.stage)}`}>
-                    {initiative.stage}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(initiative.risks)}`}>
-                    {initiative.risks?.split(' ')[0] || 'Unknown'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(initiative.updated_at).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link
-                    to={`/initiatives/${initiative.id}/edit`}
-                    className="text-primary-600 hover:text-primary-900 mr-4"
-                  >
-                    Edit
-                  </Link>
-                  <Link
-                    to={`/initiatives/${initiative.id}`}
-                    className="text-primary-600 hover:text-primary-900"
-                  >
-                    View
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Paper withBorder>
+      <ScrollArea>
+        <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Th field="title">Title</Th>
+              <Th field="program_owner">Owner</Th>
+              <Th field="department">Department</Th>
+              <Th field="stage">Stage</Th>
+              <Th sortable={false}>Risk</Th>
+              <Th field="updated_at">Updated</Th>
+              <Th sortable={false}>Actions</Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>{rows}</Table.Tbody>
+        </Table>
+      </ScrollArea>
+    </Paper>
   );
 };
 

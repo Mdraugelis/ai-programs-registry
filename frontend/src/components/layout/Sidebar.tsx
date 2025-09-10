@@ -1,142 +1,165 @@
 import React from 'react';
+import { 
+  Stack,
+  TextInput,
+  Select,
+  Button,
+  Text,
+  Group,
+  Divider,
+  Box,
+  rem,
+  ScrollArea
+} from '@mantine/core';
+import { IconSearch, IconFilterOff } from '@tabler/icons-react';
 import { useFilters } from '../../contexts/FiltersContext';
 import { departments, stages, riskLevels } from '../../services/mockData';
 
-interface SidebarProps {
-  isOpen: boolean;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
+const Sidebar: React.FC = () => {
   const { filters, updateFilters, clearFilters } = useFilters();
 
-  const handleFilterChange = (key: string, value: string) => {
-    updateFilters({ [key]: value === '' ? undefined : value });
+  const handleFilterChange = (key: string, value: string | null) => {
+    updateFilters({ [key]: value === '' || value === null ? undefined : value });
   };
 
   return (
-    <aside
-      className={`bg-gray-50 border-r border-gray-200 transition-all duration-300 ${
-        isOpen ? 'w-64' : 'w-0'
-      } overflow-hidden`}
-    >
-      <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-          <button
+    <ScrollArea h="100vh" p="md">
+      <Stack gap="lg">
+        <Group justify="space-between" align="center">
+          <Text size="lg" fw={600}>
+            Filters
+          </Text>
+          <Button
+            variant="subtle"
+            size="xs"
+            leftSection={<IconFilterOff style={{ width: rem(14), height: rem(14) }} />}
             onClick={clearFilters}
-            className="text-sm text-primary-600 hover:text-primary-700"
           >
             Clear All
-          </button>
-        </div>
+          </Button>
+        </Group>
 
         {/* Search */}
-        <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+        <Box>
+          <Text size="sm" fw={500} mb="xs">
             Search
-          </label>
-          <input
-            type="text"
-            id="search"
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
+          </Text>
+          <TextInput
             placeholder="Search initiatives..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            value={filters.search || ''}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+            leftSection={<IconSearch style={{ width: rem(16), height: rem(16) }} />}
           />
-        </div>
+        </Box>
 
         {/* Stage Filter */}
-        <div>
-          <label htmlFor="stage" className="block text-sm font-medium text-gray-700 mb-2">
+        <Box>
+          <Text size="sm" fw={500} mb="xs">
             Stage
-          </label>
-          <select
-            id="stage"
-            value={filters.stage || ''}
-            onChange={(e) => handleFilterChange('stage', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="">All Stages</option>
-            {stages.map((stage) => (
-              <option key={stage.value} value={stage.value}>
-                {stage.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          </Text>
+          <Select
+            placeholder="All Stages"
+            value={filters.stage || null}
+            onChange={(value) => handleFilterChange('stage', value)}
+            data={[
+              { value: '', label: 'All Stages' },
+              ...stages.map((stage) => ({
+                value: stage.value,
+                label: stage.label,
+              })),
+            ]}
+            clearable
+          />
+        </Box>
 
         {/* Department Filter */}
-        <div>
-          <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+        <Box>
+          <Text size="sm" fw={500} mb="xs">
             Department
-          </label>
-          <select
-            id="department"
-            value={filters.department || ''}
-            onChange={(e) => handleFilterChange('department', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-        </div>
+          </Text>
+          <Select
+            placeholder="All Departments"
+            value={filters.department || null}
+            onChange={(value) => handleFilterChange('department', value)}
+            data={[
+              { value: '', label: 'All Departments' },
+              ...departments.map((dept) => ({
+                value: dept,
+                label: dept,
+              })),
+            ]}
+            clearable
+          />
+        </Box>
 
         {/* Risk Filter */}
-        <div>
-          <label htmlFor="risk" className="block text-sm font-medium text-gray-700 mb-2">
+        <Box>
+          <Text size="sm" fw={500} mb="xs">
             Risk Level
-          </label>
-          <select
-            id="risk"
-            value={filters.risk || ''}
-            onChange={(e) => handleFilterChange('risk', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="">All Risk Levels</option>
-            {riskLevels.map((risk) => (
-              <option key={risk.value} value={risk.value}>
-                {risk.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          </Text>
+          <Select
+            placeholder="All Risk Levels"
+            value={filters.risk || null}
+            onChange={(value) => handleFilterChange('risk', value)}
+            data={[
+              { value: '', label: 'All Risk Levels' },
+              ...riskLevels.map((risk) => ({
+                value: risk.value,
+                label: risk.label,
+              })),
+            ]}
+            clearable
+          />
+        </Box>
 
         {/* Active Filters Summary */}
-        <div className="pt-4 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Active Filters:</h3>
-          <div className="space-y-1 text-sm text-gray-600">
+        <Box>
+          <Divider my="md" />
+          <Text size="sm" fw={500} mb="xs">
+            Active Filters:
+          </Text>
+          <Stack gap="xs">
             {filters.search && (
-              <div className="flex justify-between">
-                <span>Search:</span>
-                <span className="font-medium">"{filters.search}"</span>
-              </div>
+              <Group justify="space-between" gap="xs">
+                <Text size="xs" c="dimmed">Search:</Text>
+                <Text size="xs" fw={500} truncate>
+                  "{filters.search}"
+                </Text>
+              </Group>
             )}
             {filters.stage && (
-              <div className="flex justify-between">
-                <span>Stage:</span>
-                <span className="font-medium capitalize">{filters.stage}</span>
-              </div>
+              <Group justify="space-between" gap="xs">
+                <Text size="xs" c="dimmed">Stage:</Text>
+                <Text size="xs" fw={500} tt="capitalize" truncate>
+                  {filters.stage}
+                </Text>
+              </Group>
             )}
             {filters.department && (
-              <div className="flex justify-between">
-                <span>Department:</span>
-                <span className="font-medium">{filters.department}</span>
-              </div>
+              <Group justify="space-between" gap="xs">
+                <Text size="xs" c="dimmed">Department:</Text>
+                <Text size="xs" fw={500} truncate>
+                  {filters.department}
+                </Text>
+              </Group>
             )}
             {filters.risk && (
-              <div className="flex justify-between">
-                <span>Risk:</span>
-                <span className="font-medium capitalize">{filters.risk}</span>
-              </div>
+              <Group justify="space-between" gap="xs">
+                <Text size="xs" c="dimmed">Risk:</Text>
+                <Text size="xs" fw={500} tt="capitalize" truncate>
+                  {filters.risk}
+                </Text>
+              </Group>
             )}
-          </div>
-        </div>
-      </div>
-    </aside>
+            {!filters.search && !filters.stage && !filters.department && !filters.risk && (
+              <Text size="xs" c="dimmed" fs="italic">
+                No active filters
+              </Text>
+            )}
+          </Stack>
+        </Box>
+      </Stack>
+    </ScrollArea>
   );
 };
 

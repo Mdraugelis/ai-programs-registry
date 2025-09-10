@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { AppShell, Container, Center, Loader } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -10,18 +12,15 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
+  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
 
   // Show loading spinner while checking auth
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
+      <Center style={{ height: '100vh' }}>
+        <Loader size="lg" />
+      </Center>
     );
   }
 
@@ -31,19 +30,33 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header onSidebarToggle={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar isOpen={isSidebarOpen} />
-        
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
-    </div>
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !mobileOpened, desktop: !desktopOpened },
+      }}
+      padding="md"
+    >
+      <AppShell.Header>
+        <Header 
+          onSidebarToggle={toggleDesktop}
+          onMobileToggle={toggleMobile}
+          isSidebarOpen={desktopOpened}
+        />
+      </AppShell.Header>
+
+      <AppShell.Navbar>
+        <Sidebar />
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        <Container size="xl" px={0}>
+          {children}
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   );
 };
 

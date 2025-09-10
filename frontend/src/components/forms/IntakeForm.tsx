@@ -1,9 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Select,
+  Checkbox,
+  Button,
+  Group,
+  Stack,
+  Grid,
+  Accordion,
+  Loader,
+  Alert,
+  Badge,
+  ActionIcon,
+  Box
+} from '@mantine/core';
+import { useForm as useMantineForm } from '@mantine/form';
+import { notifications } from '@mantine/notifications';
+import { IconAlertCircle, IconDeviceFloppy, IconX, IconCheck, IconChevronDown } from '@tabler/icons-react';
 import { useInitiatives } from '../../contexts/InitiativesContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { departments, aiComponents } from '../../services/mockData';
+import { departments, aiComponents, stages } from '../../services/mockData';
 
 interface FormData {
   title: string;
@@ -24,6 +47,13 @@ interface FormData {
   stage: 'idea' | 'proposal' | 'pilot' | 'production' | 'retired';
 }
 
+const vendorTypeOptions = [
+  { value: 'Commercial', label: 'Commercial' },
+  { value: 'Open Source', label: 'Open Source' },
+  { value: 'Internal', label: 'Internal Development' },
+  { value: 'Hybrid', label: 'Hybrid' }
+];
+
 const IntakeForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -31,27 +61,37 @@ const IntakeForm: React.FC = () => {
   const { createInitiative, updateInitiative, getInitiative } = useInitiatives();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    problem: false,
-    technical: false,
-    governance: false
-  });
+  const [error, setError] = useState<string | null>(null);
 
   const isEditing = Boolean(id);
   const existingInitiative = id ? getInitiative(id) : null;
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors, isDirty },
     watch,
     setValue,
-    reset
+    reset,
+    getValues
   } = useForm<FormData>({
     defaultValues: {
-      stage: 'idea',
-      ai_components: []
+      title: '',
+      program_owner: '',
+      executive_champion: '',
+      department: '',
+      vendor_type: '',
+      vendors: '',
+      background: '',
+      goal: '',
+      approach_workflow: '',
+      approach_technical: '',
+      ai_components: [],
+      success_metrics: '',
+      equity_considerations: '',
+      risks: '',
+      benefits: '',
+      stage: 'idea'
     }
   });
 
@@ -59,22 +99,22 @@ const IntakeForm: React.FC = () => {
   useEffect(() => {
     if (isEditing && existingInitiative) {
       reset({
-        title: existingInitiative.title,
-        program_owner: existingInitiative.program_owner,
-        executive_champion: existingInitiative.executive_champion,
-        department: existingInitiative.department,
-        vendor_type: existingInitiative.vendor_type,
-        vendors: existingInitiative.vendors,
-        background: existingInitiative.background,
-        goal: existingInitiative.goal,
-        approach_workflow: existingInitiative.approach_workflow,
-        approach_technical: existingInitiative.approach_technical,
-        ai_components: existingInitiative.ai_components,
-        success_metrics: existingInitiative.success_metrics,
-        equity_considerations: existingInitiative.equity_considerations,
-        risks: existingInitiative.risks,
-        benefits: existingInitiative.benefits,
-        stage: existingInitiative.stage
+        title: existingInitiative.title || '',
+        program_owner: existingInitiative.program_owner || '',
+        executive_champion: existingInitiative.executive_champion || '',
+        department: existingInitiative.department || '',
+        vendor_type: existingInitiative.vendor_type || '',
+        vendors: existingInitiative.vendors || '',
+        background: existingInitiative.background || '',
+        goal: existingInitiative.goal || '',
+        approach_workflow: existingInitiative.approach_workflow || '',
+        approach_technical: existingInitiative.approach_technical || '',
+        ai_components: existingInitiative.ai_components || [],
+        success_metrics: existingInitiative.success_metrics || '',
+        equity_considerations: existingInitiative.equity_considerations || '',
+        risks: existingInitiative.risks || '',
+        benefits: existingInitiative.benefits || '',
+        stage: existingInitiative.stage || 'idea'
       });
     }
   }, [isEditing, existingInitiative, reset]);
@@ -97,9 +137,15 @@ const IntakeForm: React.FC = () => {
         try {
           const draftData = JSON.parse(draft);
           Object.keys(draftData).forEach(key => {
-            if (draftData[key]) {
+            if (draftData[key] !== null && draftData[key] !== undefined && draftData[key] !== '') {
               setValue(key as keyof FormData, draftData[key]);
             }
+          });
+          notifications.show({
+            title: 'Draft Loaded',
+            message: 'Your previous draft has been restored',
+            color: 'blue',
+            icon: <IconDeviceFloppy size={16} />
           });
         } catch (error) {
           console.error('Failed to load draft:', error);
@@ -108,27 +154,47 @@ const IntakeForm: React.FC = () => {
     }
   }, [isEditing, setValue]);
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
-
   const onSubmit = async (data: FormData) => {
-    if (!user) return;
+    if (!user) {
+      setError('You must be logged in to submit an initiative');
+      return;
+    }
     
     setIsLoading(true);
+    setError(null);
+    
     try {
       if (isEditing && existingInitiative) {
         await updateInitiative(existingInitiative.id, data);
+        notifications.show({
+          title: 'Success',
+          message: 'Initiative updated successfully',
+          color: 'green',
+          icon: <IconCheck size={16} />
+        });
       } else {
         await createInitiative({
           ...data,
           created_by: user.email
         });
-        // Clear draft after successful submission
         localStorage.removeItem('initiative_draft');
+        notifications.show({
+          title: 'Success',
+          message: 'Initiative submitted successfully',
+          color: 'green',
+          icon: <IconCheck size={16} />
+        });
       }
       navigate('/initiatives');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save initiative';
+      setError(errorMessage);
+      notifications.show({
+        title: 'Error',
+        message: errorMessage,
+        color: 'red',
+        icon: <IconAlertCircle size={16} />
+      });
       console.error('Failed to save initiative:', error);
     } finally {
       setIsLoading(false);
@@ -138,349 +204,404 @@ const IntakeForm: React.FC = () => {
   const clearDraft = () => {
     localStorage.removeItem('initiative_draft');
     reset();
+    notifications.show({
+      title: 'Draft Cleared',
+      message: 'Your draft has been cleared',
+      color: 'orange'
+    });
   };
 
   const handleCancel = () => {
     navigate('/initiatives');
   };
 
-  const SectionHeader: React.FC<{ title: string; section: keyof typeof expandedSections; required?: boolean }> = ({ 
-    title, 
-    section, 
-    required = false 
-  }) => (
-    <button
-      type="button"
-      onClick={() => toggleSection(section)}
-      className="w-full flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-    >
-      <h2 className="text-lg font-medium text-gray-900">
-        {title}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </h2>
-      <svg
-        className={`w-5 h-5 text-gray-500 transform transition-transform ${
-          expandedSections[section] ? 'rotate-180' : ''
-        }`}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    </button>
-  );
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isEditing ? 'Edit Initiative' : 'New AI Initiative'}
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            {isEditing ? 'Update your AI initiative details' : 'Submit a new AI initiative for review'}
-          </p>
-        </div>
-        {!isEditing && isDirty && (
-          <button
-            type="button"
-            onClick={clearDraft}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Clear Draft
-          </button>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information Section */}
-        <div className="space-y-4">
-          <SectionHeader title="Basic Information" section="basic" required />
-          {expandedSections.basic && (
-            <div className="bg-white p-6 border border-gray-200 rounded-lg space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                    Initiative Title <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="title"
-                    {...register('title', { required: 'Title is required' })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-                    Department <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="department"
-                    {...register('department', { required: 'Department is required' })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                  {errors.department && <p className="mt-1 text-sm text-red-600">{errors.department.message}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="program_owner" className="block text-sm font-medium text-gray-700">
-                    Program Owner <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="program_owner"
-                    {...register('program_owner', { required: 'Program owner is required' })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errors.program_owner && <p className="mt-1 text-sm text-red-600">{errors.program_owner.message}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="executive_champion" className="block text-sm font-medium text-gray-700">
-                    Executive Champion <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="executive_champion"
-                    {...register('executive_champion', { required: 'Executive champion is required' })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errors.executive_champion && <p className="mt-1 text-sm text-red-600">{errors.executive_champion.message}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="stage" className="block text-sm font-medium text-gray-700">
-                    Current Stage <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="stage"
-                    {...register('stage', { required: 'Stage is required' })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="idea">Idea</option>
-                    <option value="proposal">Proposal</option>
-                    <option value="pilot">Pilot</option>
-                    <option value="production">Production</option>
-                    <option value="retired">Retired</option>
-                  </select>
-                  {errors.stage && <p className="mt-1 text-sm text-red-600">{errors.stage.message}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="vendor_type" className="block text-sm font-medium text-gray-700">
-                    Vendor Type
-                  </label>
-                  <select
-                    id="vendor_type"
-                    {...register('vendor_type')}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Select Vendor Type</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Open Source">Open Source</option>
-                    <option value="Internal">Internal Development</option>
-                    <option value="Hybrid">Hybrid</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="vendors" className="block text-sm font-medium text-gray-700">
-                  Vendors
-                </label>
-                <input
-                  type="text"
-                  id="vendors"
-                  {...register('vendors')}
-                  placeholder="e.g., Microsoft, Google, Internal Team"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Problem & Goals Section */}
-        <div className="space-y-4">
-          <SectionHeader title="Problem & Goals" section="problem" />
-          {expandedSections.problem && (
-            <div className="bg-white p-6 border border-gray-200 rounded-lg space-y-4">
-              <div>
-                <label htmlFor="background" className="block text-sm font-medium text-gray-700">
-                  Background & Problem Statement
-                </label>
-                <textarea
-                  id="background"
-                  rows={4}
-                  {...register('background')}
-                  placeholder="Describe the current problem or opportunity this initiative addresses..."
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="goal" className="block text-sm font-medium text-gray-700">
-                  Goals & Expected Outcomes
-                </label>
-                <textarea
-                  id="goal"
-                  rows={4}
-                  {...register('goal')}
-                  placeholder="What specific goals will this initiative achieve? What are the expected outcomes?"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="success_metrics" className="block text-sm font-medium text-gray-700">
-                  Success Metrics
-                </label>
-                <textarea
-                  id="success_metrics"
-                  rows={3}
-                  {...register('success_metrics')}
-                  placeholder="How will you measure success? Include specific metrics, KPIs, or outcomes..."
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Technical Approach Section */}
-        <div className="space-y-4">
-          <SectionHeader title="Technical Approach" section="technical" />
-          {expandedSections.technical && (
-            <div className="bg-white p-6 border border-gray-200 rounded-lg space-y-4">
-              <div>
-                <label htmlFor="approach_workflow" className="block text-sm font-medium text-gray-700">
-                  Workflow Description
-                </label>
-                <textarea
-                  id="approach_workflow"
-                  rows={4}
-                  {...register('approach_workflow')}
-                  placeholder="Describe how this AI solution will fit into existing workflows..."
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="approach_technical" className="block text-sm font-medium text-gray-700">
-                  Technical Implementation
-                </label>
-                <textarea
-                  id="approach_technical"
-                  rows={4}
-                  {...register('approach_technical')}
-                  placeholder="Describe the technical approach, architecture, models, or algorithms to be used..."
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  AI Components (select all that apply)
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {aiComponents.map(component => (
-                    <label key={component} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        value={component}
-                        {...register('ai_components')}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">{component}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Governance & Risk Section */}
-        <div className="space-y-4">
-          <SectionHeader title="Governance & Risk" section="governance" />
-          {expandedSections.governance && (
-            <div className="bg-white p-6 border border-gray-200 rounded-lg space-y-4">
-              <div>
-                <label htmlFor="risks" className="block text-sm font-medium text-gray-700">
-                  Risk Assessment
-                </label>
-                <textarea
-                  id="risks"
-                  rows={4}
-                  {...register('risks')}
-                  placeholder="Identify potential risks, their severity (Low/Medium/High), and mitigation strategies..."
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="equity_considerations" className="block text-sm font-medium text-gray-700">
-                  Equity Considerations
-                </label>
-                <textarea
-                  id="equity_considerations"
-                  rows={4}
-                  {...register('equity_considerations')}
-                  placeholder="How will you ensure fairness and avoid bias? Consider different patient populations, demographics, etc..."
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="benefits" className="block text-sm font-medium text-gray-700">
-                  Expected Benefits
-                </label>
-                <textarea
-                  id="benefits"
-                  rows={4}
-                  {...register('benefits')}
-                  placeholder="What benefits will this initiative provide to patients, staff, and the organization?"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Form Actions */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          >
-            Cancel
-          </button>
-          
-          <div className="flex space-x-3">
-            {!isEditing && isDirty && (
-              <span className="text-sm text-gray-500 italic">Draft saved automatically</span>
-            )}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Saving...' : isEditing ? 'Update Initiative' : 'Submit Initiative'}
-            </button>
+  if (isLoading && !getValues().title) {
+    return (
+      <Container size="lg" py="xl">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <Loader size="lg" />
+            <Text mt="md" c="dimmed">Loading form...</Text>
           </div>
         </div>
-      </form>
-    </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Container size="xl" py="md">
+      <Paper p="xl" withBorder>
+        {/* Header */}
+        <Group justify="space-between" mb="xl">
+          <Stack gap="xs">
+            <Title order={1} size="h2">
+              {isEditing ? 'Edit Initiative' : 'New AI Initiative'}
+            </Title>
+            <Text c="dimmed">
+              {isEditing ? 'Update your AI initiative details' : 'Submit a new AI initiative for review'}
+            </Text>
+          </Stack>
+          
+          {!isEditing && isDirty && (
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={clearDraft}
+              leftSection={<IconX size={16} />}
+            >
+              Clear Draft
+            </Button>
+          )}
+        </Group>
+
+        {error && (
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            title="Error"
+            color="red"
+            mb="md"
+            onClose={() => setError(null)}
+            withCloseButton
+          >
+            {error}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Accordion multiple defaultValue={['basic']} variant="separated">
+            {/* Basic Information Section */}
+            <Accordion.Item value="basic">
+              <Accordion.Control>
+                <Group>
+                  <Title order={3}>Basic Information</Title>
+                  <Badge color="red" size="sm">Required</Badge>
+                </Group>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="md">
+                  <Grid>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Controller
+                        name="title"
+                        control={control}
+                        rules={{ required: 'Title is required' }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            label="Initiative Title"
+                            placeholder="Enter initiative title"
+                            required
+                            error={errors.title?.message}
+                          />
+                        )}
+                      />
+                    </Grid.Col>
+                    
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Controller
+                        name="department"
+                        control={control}
+                        rules={{ required: 'Department is required' }}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            label="Department"
+                            placeholder="Select department"
+                            data={departments.map(dept => ({ value: dept, label: dept }))}
+                            required
+                            error={errors.department?.message}
+                            searchable
+                          />
+                        )}
+                      />
+                    </Grid.Col>
+                    
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Controller
+                        name="program_owner"
+                        control={control}
+                        rules={{ required: 'Program owner is required' }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            label="Program Owner"
+                            placeholder="Enter program owner name"
+                            required
+                            error={errors.program_owner?.message}
+                          />
+                        )}
+                      />
+                    </Grid.Col>
+                    
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Controller
+                        name="executive_champion"
+                        control={control}
+                        rules={{ required: 'Executive champion is required' }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            label="Executive Champion"
+                            placeholder="Enter executive champion name"
+                            required
+                            error={errors.executive_champion?.message}
+                          />
+                        )}
+                      />
+                    </Grid.Col>
+                    
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Controller
+                        name="stage"
+                        control={control}
+                        rules={{ required: 'Stage is required' }}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            label="Current Stage"
+                            placeholder="Select current stage"
+                            data={stages}
+                            required
+                            error={errors.stage?.message}
+                          />
+                        )}
+                      />
+                    </Grid.Col>
+                    
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Controller
+                        name="vendor_type"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            label="Vendor Type"
+                            placeholder="Select vendor type"
+                            data={vendorTypeOptions}
+                            clearable
+                          />
+                        )}
+                      />
+                    </Grid.Col>
+                  </Grid>
+                  
+                  <Controller
+                    name="vendors"
+                    control={control}
+                    render={({ field }) => (
+                      <TextInput
+                        {...field}
+                        label="Vendors"
+                        placeholder="e.g., Microsoft, Google, Internal Team"
+                        description="List the vendors or partners involved in this initiative"
+                      />
+                    )}
+                  />
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+
+            {/* Problem & Goals Section */}
+            <Accordion.Item value="problem">
+              <Accordion.Control>
+                <Title order={3}>Problem & Goals</Title>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="md">
+                  <Controller
+                    name="background"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Background & Problem Statement"
+                        placeholder="Describe the current problem or opportunity this initiative addresses..."
+                        rows={4}
+                        description="Provide context about why this AI initiative is needed"
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name="goal"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Goals & Expected Outcomes"
+                        placeholder="What specific goals will this initiative achieve? What are the expected outcomes?"
+                        rows={4}
+                        description="Define clear, measurable objectives for the initiative"
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name="success_metrics"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Success Metrics"
+                        placeholder="How will you measure success? Include specific metrics, KPIs, or outcomes..."
+                        rows={3}
+                        description="Specify how success will be measured and tracked"
+                      />
+                    )}
+                  />
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+
+            {/* Technical Approach Section */}
+            <Accordion.Item value="technical">
+              <Accordion.Control>
+                <Title order={3}>Technical Approach</Title>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="md">
+                  <Controller
+                    name="approach_workflow"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Workflow Description"
+                        placeholder="Describe how this AI solution will fit into existing workflows..."
+                        rows={4}
+                        description="Explain how the AI system will integrate with current processes"
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name="approach_technical"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Technical Implementation"
+                        placeholder="Describe the technical approach, architecture, models, or algorithms to be used..."
+                        rows={4}
+                        description="Detail the technical aspects of the AI implementation"
+                      />
+                    )}
+                  />
+                  
+                  <Box>
+                    <Text size="sm" fw={500} mb="sm">AI Components</Text>
+                    <Text size="xs" c="dimmed" mb="md">Select all AI technologies that apply to this initiative</Text>
+                    <Grid>
+                      {aiComponents.map((component) => (
+                        <Grid.Col span={{ base: 12, xs: 6, md: 4 }} key={component}>
+                          <Controller
+                            name="ai_components"
+                            control={control}
+                            render={({ field: { value, onChange } }) => (
+                              <Checkbox
+                                label={component}
+                                checked={value?.includes(component) || false}
+                                onChange={(event) => {
+                                  const currentValue = value || [];
+                                  if (event.currentTarget.checked) {
+                                    onChange([...currentValue, component]);
+                                  } else {
+                                    onChange(currentValue.filter((item: string) => item !== component));
+                                  }
+                                }}
+                              />
+                            )}
+                          />
+                        </Grid.Col>
+                      ))}
+                    </Grid>
+                  </Box>
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+
+            {/* Governance & Risk Section */}
+            <Accordion.Item value="governance">
+              <Accordion.Control>
+                <Title order={3}>Governance & Risk</Title>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="md">
+                  <Controller
+                    name="risks"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Risk Assessment"
+                        placeholder="Identify potential risks, their severity (Low/Medium/High), and mitigation strategies..."
+                        rows={4}
+                        description="Assess potential risks and how they will be mitigated"
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name="equity_considerations"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Equity Considerations"
+                        placeholder="How will you ensure fairness and avoid bias? Consider different patient populations, demographics, etc..."
+                        rows={4}
+                        description="Address how the AI system will ensure equitable outcomes"
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name="benefits"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        label="Expected Benefits"
+                        placeholder="What benefits will this initiative provide to patients, staff, and the organization?"
+                        rows={4}
+                        description="Outline the anticipated positive impacts of this initiative"
+                      />
+                    )}
+                  />
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
+
+          {/* Form Actions */}
+          <Group justify="space-between" mt="xl" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              leftSection={<IconX size={16} />}
+            >
+              Cancel
+            </Button>
+            
+            <Group>
+              {!isEditing && isDirty && (
+                <Group gap="xs">
+                  <IconDeviceFloppy size={16} color="var(--mantine-color-blue-6)" />
+                  <Text size="sm" c="dimmed" fs="italic">Draft saved automatically</Text>
+                </Group>
+              )}
+              <Button
+                type="submit"
+                loading={isLoading}
+                leftSection={!isLoading && <IconCheck size={16} />}
+              >
+                {isLoading ? 'Saving...' : isEditing ? 'Update Initiative' : 'Submit Initiative'}
+              </Button>
+            </Group>
+          </Group>
+        </form>
+      </Paper>
+    </Container>
   );
 };
 

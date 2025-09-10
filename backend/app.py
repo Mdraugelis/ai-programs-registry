@@ -10,10 +10,13 @@ from typing import List, Optional
 from database import execute_query, execute_one, execute_insert, execute_update
 from models import (
     Initiative, InitiativeCreate, InitiativeUpdate,
-    Document, DocumentCreate,
+    Document, DocumentCreate, DocumentUpdate,
+    DocumentTemplate, DocumentTemplateCreate,
+    DocumentRequirement, ComplianceStatus,
     Token, LoginRequest,
     ChatRequest, ChatResponse, ChatSetupRequest, ChatStatusResponse
 )
+import document_manager as doc_mgr
 from auth import (
     authenticate_user, create_access_token, get_current_active_user,
     ACCESS_TOKEN_EXPIRE_MINUTES, require_role
@@ -265,14 +268,373 @@ async def download_document(
 @app.get("/api/initiatives/{initiative_id}/documents", response_model=List[Document])
 async def list_initiative_documents(
     initiative_id: int,
+    library_type: Optional[str] = Query(None, regex="^(core|ancillary)$"),
     current_user = Depends(get_current_active_user)
 ):
     """List all documents for an initiative"""
-    documents = execute_query(
-        "SELECT * FROM documents WHERE initiative_id = ? ORDER BY uploaded_at DESC",
+    query = "SELECT * FROM documents WHERE initiative_id = ?"
+    params = [initiative_id]
+    
+    if library_type:
+        query += " AND library_type = ?"
+        params.append(library_type)
+    
+    query += " ORDER BY uploaded_at DESC"
+    
+    documents = execute_query(query, tuple(params))
+    return [dict(doc) for doc in documents]
+
+# Admin Document Management endpoints
+@app.post("/api/admin/documents")
+async def upload_admin_document(
+    category: str = Form(..., regex="^(policy|template|howto)$"),
+    description: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    is_template: bool = Form(False),
+    file: UploadFile = File(...),
+    current_user = Depends(require_role("admin"))
+):
+    """Upload a document to the admin library (admin only)"""
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large")
+    
+    # Save file using document manager
+    relative_path = doc_mgr.save_document_file(
+        contents, file.filename, "admin", category
+    )
+    
+    # Save to database
+    doc_id = execute_insert(
+        """INSERT INTO documents (
+            filename, file_path, file_size, uploaded_by, 
+            library_type, category, description, tags, is_template
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            file.filename, relative_path, len(contents),
+            current_user["username"], "admin", category,
+            description, tags, is_template
+        )
+    )
+    
+    return {
+        "id": doc_id,
+        "filename": file.filename,
+        "category": category,
+        "message": "Admin document uploaded successfully"
+    }
+
+@app.get("/api/admin/documents")
+async def list_admin_documents(
+    category: Optional[str] = Query(None, regex="^(policy|template|howto)$"),
+    current_user = Depends(get_current_active_user)
+):
+    """List all admin library documents"""
+    query = "SELECT * FROM documents WHERE library_type = 'admin'"
+    params = []
+    
+    if category:
+        query += " AND category = ?"
+        params.append(category)
+    
+    query += " ORDER BY uploaded_at DESC"
+    
+    documents = execute_query(query, tuple(params) if params else None)
+    return [dict(doc) for doc in documents]
+
+# Initiative Core Documents endpoints
+@app.post("/api/initiatives/{initiative_id}/documents/core")
+async def upload_core_document(
+    initiative_id: int,
+    is_required: bool = Form(True),
+    document_type: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_active_user)
+):
+    """Upload a core governance document for an initiative"""
+    # Check if initiative exists
+    initiative = execute_one("SELECT * FROM initiatives WHERE id = ?", (initiative_id,))
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large")
+    
+    # Save file
+    relative_path = doc_mgr.save_document_file(
+        contents, file.filename, "core", None, initiative_id, is_required
+    )
+    
+    # Save to database
+    doc_id = execute_insert(
+        """INSERT INTO documents (
+            initiative_id, filename, file_path, file_size, uploaded_by,
+            library_type, document_type, is_required, description, tags
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            initiative_id, file.filename, relative_path, len(contents),
+            current_user["username"], "core", document_type,
+            is_required, description, tags
+        )
+    )
+    
+    return {
+        "id": doc_id,
+        "filename": file.filename,
+        "is_required": is_required,
+        "message": "Core document uploaded successfully"
+    }
+
+# Initiative Ancillary Documents endpoints
+@app.post("/api/initiatives/{initiative_id}/documents/ancillary")
+async def upload_ancillary_document(
+    initiative_id: int,
+    document_type: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_active_user)
+):
+    """Upload an ancillary document for an initiative"""
+    # Check if initiative exists
+    initiative = execute_one("SELECT * FROM initiatives WHERE id = ?", (initiative_id,))
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large")
+    
+    # Save file
+    relative_path = doc_mgr.save_document_file(
+        contents, file.filename, "ancillary", None, initiative_id
+    )
+    
+    # Save to database
+    doc_id = execute_insert(
+        """INSERT INTO documents (
+            initiative_id, filename, file_path, file_size, uploaded_by,
+            library_type, document_type, description, tags
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            initiative_id, file.filename, relative_path, len(contents),
+            current_user["username"], "ancillary", document_type,
+            description, tags
+        )
+    )
+    
+    return {
+        "id": doc_id,
+        "filename": file.filename,
+        "message": "Ancillary document uploaded successfully"
+    }
+
+# Template Management endpoints
+@app.post("/api/admin/templates")
+async def create_document_template(
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    placeholders: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    current_user = Depends(require_role("admin"))
+):
+    """Create a new document template (admin only)"""
+    file_path = None
+    
+    if file:
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
+        
+        # Save template file
+        file_path = doc_mgr.save_document_file(
+            contents, file.filename, "admin", "template"
+        )
+    
+    # Save to database
+    template_id = execute_insert(
+        """INSERT INTO document_templates (
+            name, description, category, file_path, placeholders, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            name, description, category, file_path, placeholders,
+            current_user["username"]
+        )
+    )
+    
+    return {
+        "id": template_id,
+        "name": name,
+        "message": "Template created successfully"
+    }
+
+@app.get("/api/admin/templates")
+async def list_document_templates(
+    category: Optional[str] = None,
+    current_user = Depends(get_current_active_user)
+):
+    """List all document templates"""
+    query = "SELECT * FROM document_templates WHERE is_active = 1"
+    params = []
+    
+    if category:
+        query += " AND category = ?"
+        params.append(category)
+    
+    query += " ORDER BY created_at DESC"
+    
+    templates = execute_query(query, tuple(params) if params else None)
+    return [dict(template) for template in templates]
+
+@app.post("/api/initiatives/{initiative_id}/templates/{template_id}/instantiate")
+async def instantiate_template(
+    initiative_id: int,
+    template_id: int,
+    document_name: str = Form(...),
+    is_required: bool = Form(True),
+    current_user = Depends(get_current_active_user)
+):
+    """Create a document from a template for an initiative"""
+    # Check if initiative exists
+    initiative = execute_one("SELECT * FROM initiatives WHERE id = ?", (initiative_id,))
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    
+    # Get template
+    template = execute_one(
+        "SELECT * FROM document_templates WHERE id = ? AND is_active = 1",
+        (template_id,)
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Copy template file if it exists
+    relative_path = None
+    if template["file_path"]:
+        relative_path = doc_mgr.copy_template_file(
+            template["file_path"], initiative_id, document_name, is_required
+        )
+    
+    # Create document record
+    doc_id = execute_insert(
+        """INSERT INTO documents (
+            initiative_id, filename, file_path, uploaded_by,
+            library_type, is_required, template_id, description
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            initiative_id, document_name, relative_path,
+            current_user["username"], "core", is_required,
+            template_id, f"Created from template: {template['name']}"
+        )
+    )
+    
+    return {
+        "id": doc_id,
+        "filename": document_name,
+        "template_name": template["name"],
+        "message": "Document created from template successfully"
+    }
+
+# Compliance tracking endpoints
+@app.get("/api/initiatives/{initiative_id}/compliance", response_model=ComplianceStatus)
+async def check_compliance_status(
+    initiative_id: int,
+    current_user = Depends(get_current_active_user)
+):
+    """Check document compliance status for an initiative"""
+    # Get all required documents for the initiative's stage
+    initiative = execute_one("SELECT * FROM initiatives WHERE id = ?", (initiative_id,))
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    
+    # Get required documents based on stage
+    required_docs = execute_query(
+        """SELECT * FROM document_requirements 
+           WHERE is_mandatory = 1 AND (stage = ? OR stage IS NULL)""",
+        (initiative["stage"],)
+    )
+    
+    # Get uploaded required documents
+    uploaded_docs = execute_query(
+        """SELECT * FROM documents 
+           WHERE initiative_id = ? AND library_type = 'core' 
+           AND is_required = 1 AND status = 'active'""",
         (initiative_id,)
     )
-    return [dict(doc) for doc in documents]
+    
+    total_required = len(required_docs)
+    completed = len(uploaded_docs)
+    
+    # Find missing documents
+    uploaded_types = {doc["document_type"] for doc in uploaded_docs if doc["document_type"]}
+    required_types = {doc["name"] for doc in required_docs}
+    missing = list(required_types - uploaded_types)
+    
+    compliance_percentage = (completed / total_required * 100) if total_required > 0 else 100
+    
+    status = "compliant" if compliance_percentage == 100 else "non-compliant"
+    if compliance_percentage >= 80:
+        status = "mostly-compliant"
+    elif compliance_percentage >= 50:
+        status = "partially-compliant"
+    
+    return {
+        "initiative_id": initiative_id,
+        "total_required": total_required,
+        "completed": completed,
+        "missing": missing,
+        "compliance_percentage": compliance_percentage,
+        "status": status
+    }
+
+@app.get("/api/initiatives/{initiative_id}/required-documents")
+async def list_required_documents(
+    initiative_id: int,
+    current_user = Depends(get_current_active_user)
+):
+    """List required documents for an initiative based on its stage"""
+    # Get initiative stage
+    initiative = execute_one("SELECT * FROM initiatives WHERE id = ?", (initiative_id,))
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    
+    # Get required documents for this stage
+    required = execute_query(
+        """SELECT dr.*, dt.file_path as template_path
+           FROM document_requirements dr
+           LEFT JOIN document_templates dt ON dr.template_id = dt.id
+           WHERE dr.is_mandatory = 1 AND (dr.stage = ? OR dr.stage IS NULL)
+           ORDER BY dr.name""",
+        (initiative["stage"],)
+    )
+    
+    # Check which are already uploaded
+    uploaded = execute_query(
+        """SELECT document_type FROM documents
+           WHERE initiative_id = ? AND library_type = 'core' 
+           AND is_required = 1 AND status = 'active'""",
+        (initiative_id,)
+    )
+    
+    uploaded_types = {doc["document_type"] for doc in uploaded if doc["document_type"]}
+    
+    result = []
+    for req in required:
+        result.append({
+            "id": req["id"],
+            "name": req["name"],
+            "description": req["description"],
+            "category": req["category"],
+            "has_template": req["template_path"] is not None,
+            "template_id": req["template_id"],
+            "is_uploaded": req["name"] in uploaded_types
+        })
+    
+    return result
 
 # Export endpoint
 @app.get("/api/export/csv")

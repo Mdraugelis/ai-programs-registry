@@ -5,6 +5,8 @@ import Layout from './components/layout/Layout';
 import InitiativeList from './components/initiatives/InitiativeList';
 import IntakeForm from './components/forms/IntakeForm';
 import InitiativeDetail from './components/initiatives/InitiativeDetail';
+import DocumentTestPage from './components/shared/documents/DocumentTestPage';
+import TestSimple from './components/TestSimple';
 import { AuthProvider } from './contexts/AuthContext';
 import { InitiativesProvider } from './contexts/InitiativesContext';
 import { FiltersProvider } from './contexts/FiltersContext';
@@ -42,6 +44,8 @@ function App() {
                     <Route path="/initiatives/new" element={<IntakeForm />} />
                     <Route path="/initiatives/:id" element={<InitiativeDetail />} />
                     <Route path="/initiatives/:id/edit" element={<IntakeForm />} />
+                    <Route path="/test-documents" element={<DocumentTestPage />} />
+                    <Route path="/test-simple" element={<TestSimple />} />
                   </Routes>
                 </Layout>
               </Router>

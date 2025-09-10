@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 import os
 
@@ -32,14 +32,66 @@ if IS_PRODUCTION:
     DOCUMENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS documents (
         id SERIAL PRIMARY KEY,
-        initiative_id INTEGER NOT NULL,
+        initiative_id INTEGER,
         filename VARCHAR(255) NOT NULL,
         file_path VARCHAR(500) NOT NULL,
         file_size INTEGER,
         uploaded_by VARCHAR(255),
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         document_type VARCHAR(100),
-        FOREIGN KEY (initiative_id) REFERENCES initiatives (id)
+        library_type VARCHAR(20) CHECK(library_type IN ('admin', 'core', 'ancillary')) NOT NULL,
+        category VARCHAR(50),
+        is_template BOOLEAN DEFAULT FALSE,
+        is_required BOOLEAN DEFAULT FALSE,
+        template_id INTEGER,
+        version INTEGER DEFAULT 1,
+        status VARCHAR(20) DEFAULT 'active' CHECK(status IN ('active', 'archived', 'deleted')),
+        description TEXT,
+        tags TEXT,
+        FOREIGN KEY (initiative_id) REFERENCES initiatives (id),
+        FOREIGN KEY (template_id) REFERENCES documents (id)
+    )
+    """
+
+    DOCUMENT_TEMPLATES_TABLE = """
+    CREATE TABLE IF NOT EXISTS document_templates (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        category VARCHAR(50),
+        file_path VARCHAR(500),
+        placeholders TEXT,
+        created_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE
+    )
+    """
+
+    DOCUMENT_REQUIREMENTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS document_requirements (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        category VARCHAR(50),
+        stage VARCHAR(20),
+        is_mandatory BOOLEAN DEFAULT TRUE,
+        template_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (template_id) REFERENCES document_templates (id)
+    )
+    """
+
+    DOCUMENT_VERSIONS_TABLE = """
+    CREATE TABLE IF NOT EXISTS document_versions (
+        id SERIAL PRIMARY KEY,
+        document_id INTEGER NOT NULL,
+        version_number INTEGER NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        change_summary TEXT,
+        uploaded_by VARCHAR(255),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (document_id) REFERENCES documents (id)
     )
     """
 
@@ -91,14 +143,66 @@ else:
     DOCUMENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        initiative_id INTEGER NOT NULL,
+        initiative_id INTEGER,
         filename TEXT NOT NULL,
         file_path TEXT NOT NULL,
         file_size INTEGER,
         uploaded_by TEXT,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         document_type TEXT,
-        FOREIGN KEY (initiative_id) REFERENCES initiatives (id)
+        library_type TEXT CHECK(library_type IN ('admin', 'core', 'ancillary')) NOT NULL,
+        category TEXT,
+        is_template INTEGER DEFAULT 0,
+        is_required INTEGER DEFAULT 0,
+        template_id INTEGER,
+        version INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'active' CHECK(status IN ('active', 'archived', 'deleted')),
+        description TEXT,
+        tags TEXT,
+        FOREIGN KEY (initiative_id) REFERENCES initiatives (id),
+        FOREIGN KEY (template_id) REFERENCES documents (id)
+    )
+    """
+
+    DOCUMENT_TEMPLATES_TABLE = """
+    CREATE TABLE IF NOT EXISTS document_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        category TEXT,
+        file_path TEXT,
+        placeholders TEXT,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active INTEGER DEFAULT 1
+    )
+    """
+
+    DOCUMENT_REQUIREMENTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS document_requirements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        category TEXT,
+        stage TEXT,
+        is_mandatory INTEGER DEFAULT 1,
+        template_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (template_id) REFERENCES document_templates (id)
+    )
+    """
+
+    DOCUMENT_VERSIONS_TABLE = """
+    CREATE TABLE IF NOT EXISTS document_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id INTEGER NOT NULL,
+        version_number INTEGER NOT NULL,
+        file_path TEXT NOT NULL,
+        change_summary TEXT,
+        uploaded_by TEXT,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (document_id) REFERENCES documents (id)
     )
     """
 
@@ -156,15 +260,33 @@ class Initiative(InitiativeBase):
         from_attributes = True
 
 class DocumentBase(BaseModel):
-    initiative_id: int
+    initiative_id: Optional[int] = None
     filename: str
     file_path: str
     file_size: Optional[int] = None
     uploaded_by: Optional[str] = None
     document_type: Optional[str] = None
+    library_type: str = Field(..., pattern="^(admin|core|ancillary)$")
+    category: Optional[str] = None
+    is_template: bool = False
+    is_required: bool = False
+    template_id: Optional[int] = None
+    version: int = 1
+    status: str = Field("active", pattern="^(active|archived|deleted)$")
+    description: Optional[str] = None
+    tags: Optional[str] = None
 
 class DocumentCreate(DocumentBase):
     pass
+
+class DocumentUpdate(BaseModel):
+    filename: Optional[str] = None
+    document_type: Optional[str] = None
+    category: Optional[str] = None
+    is_required: Optional[bool] = None
+    status: Optional[str] = Field(None, pattern="^(active|archived|deleted)$")
+    description: Optional[str] = None
+    tags: Optional[str] = None
 
 class Document(DocumentBase):
     id: int
@@ -172,6 +294,59 @@ class Document(DocumentBase):
 
     class Config:
         from_attributes = True
+
+class DocumentTemplateBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    file_path: Optional[str] = None
+    placeholders: Optional[str] = None
+    created_by: Optional[str] = None
+    is_active: bool = True
+
+class DocumentTemplateCreate(DocumentTemplateBase):
+    pass
+
+class DocumentTemplate(DocumentTemplateBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DocumentRequirement(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    stage: Optional[str] = None
+    is_mandatory: bool = True
+    template_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DocumentVersion(BaseModel):
+    id: int
+    document_id: int
+    version_number: int
+    file_path: str
+    change_summary: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ComplianceStatus(BaseModel):
+    initiative_id: int
+    total_required: int
+    completed: int
+    missing: List[str]
+    compliance_percentage: float
+    status: str
 
 class UserBase(BaseModel):
     username: str

@@ -1,0 +1,56 @@
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Database files (will be created in container)
+backend/*.db
+backend/database.db
+
+# Development files
+*.md
+.env.local
+.env.development
+
+# Build artifacts
+frontend/dist/
+frontend/build/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Uploads (will be created in container)
+uploads/

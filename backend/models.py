@@ -1,65 +1,130 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, Field
+import os
+
+# Check if we're in production
+IS_PRODUCTION = os.getenv("DATABASE_URL") is not None
 
 # Database table schemas as SQL
-INITIATIVES_TABLE = """
-CREATE TABLE IF NOT EXISTS initiatives (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    department TEXT,
-    stage TEXT CHECK(stage IN ('discovery', 'pilot', 'production', 'retired')),
-    priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'critical')),
-    lead_name TEXT,
-    lead_email TEXT,
-    business_value TEXT,
-    technical_approach TEXT,
-    start_date DATE,
-    end_date DATE,
-    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'paused', 'completed', 'deleted')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-"""
+if IS_PRODUCTION:
+    # PostgreSQL table definitions
+    INITIATIVES_TABLE = """
+    CREATE TABLE IF NOT EXISTS initiatives (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        department VARCHAR(100),
+        stage VARCHAR(20) CHECK(stage IN ('discovery', 'pilot', 'production', 'retired')),
+        priority VARCHAR(20) CHECK(priority IN ('low', 'medium', 'high', 'critical')),
+        lead_name VARCHAR(255),
+        lead_email VARCHAR(255),
+        business_value TEXT,
+        technical_approach TEXT,
+        start_date DATE,
+        end_date DATE,
+        status VARCHAR(20) DEFAULT 'active' CHECK(status IN ('active', 'paused', 'completed', 'deleted')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
 
-DOCUMENTS_TABLE = """
-CREATE TABLE IF NOT EXISTS documents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    initiative_id INTEGER NOT NULL,
-    filename TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    file_size INTEGER,
-    uploaded_by TEXT,
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    document_type TEXT,
-    FOREIGN KEY (initiative_id) REFERENCES initiatives (id)
-)
-"""
+    DOCUMENTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS documents (
+        id SERIAL PRIMARY KEY,
+        initiative_id INTEGER NOT NULL,
+        filename VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INTEGER,
+        uploaded_by VARCHAR(255),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        document_type VARCHAR(100),
+        FOREIGN KEY (initiative_id) REFERENCES initiatives (id)
+    )
+    """
 
-USERS_TABLE = """
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    hashed_password TEXT NOT NULL,
-    role TEXT CHECK(role IN ('admin', 'reviewer', 'contributor')) DEFAULT 'contributor',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP
-)
-"""
+    USERS_TABLE = """
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        hashed_password VARCHAR(255) NOT NULL,
+        role VARCHAR(20) CHECK(role IN ('admin', 'reviewer', 'contributor')) DEFAULT 'contributor',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP
+    )
+    """
 
-USER_API_KEYS_TABLE = """
-CREATE TABLE IF NOT EXISTS user_api_keys (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT UNIQUE NOT NULL,
-    encrypted_claude_key TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_used TIMESTAMP,
-    usage_count INTEGER DEFAULT 0,
-    FOREIGN KEY (user_id) REFERENCES users (username)
-)
-"""
+    USER_API_KEYS_TABLE = """
+    CREATE TABLE IF NOT EXISTS user_api_keys (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(100) UNIQUE NOT NULL,
+        encrypted_claude_key TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_used TIMESTAMP,
+        usage_count INTEGER DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users (username)
+    )
+    """
+else:
+    # SQLite table definitions  
+    INITIATIVES_TABLE = """
+    CREATE TABLE IF NOT EXISTS initiatives (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        department TEXT,
+        stage TEXT CHECK(stage IN ('discovery', 'pilot', 'production', 'retired')),
+        priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'critical')),
+        lead_name TEXT,
+        lead_email TEXT,
+        business_value TEXT,
+        technical_approach TEXT,
+        start_date DATE,
+        end_date DATE,
+        status TEXT DEFAULT 'active' CHECK(status IN ('active', 'paused', 'completed', 'deleted')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+
+    DOCUMENTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        initiative_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER,
+        uploaded_by TEXT,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        document_type TEXT,
+        FOREIGN KEY (initiative_id) REFERENCES initiatives (id)
+    )
+    """
+
+    USERS_TABLE = """
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        hashed_password TEXT NOT NULL,
+        role TEXT CHECK(role IN ('admin', 'reviewer', 'contributor')) DEFAULT 'contributor',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP
+    )
+    """
+
+    USER_API_KEYS_TABLE = """
+    CREATE TABLE IF NOT EXISTS user_api_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        encrypted_claude_key TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_used TIMESTAMP,
+        usage_count INTEGER DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users (username)
+    )
+    """
 
 # Pydantic models for API
 class InitiativeBase(BaseModel):

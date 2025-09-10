@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Query, UploadFile, File, Fo
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -370,16 +371,41 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 
-# Root endpoint
-@app.get("/")
-async def root():
-    """API root endpoint"""
-    return {
-        "name": "AI Initiatives Inventory API",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "health": "/health"
-    }
+# Static file serving for production
+static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    
+    @app.get("/")
+    async def serve_spa():
+        """Serve the React SPA"""
+        return FileResponse(os.path.join(static_dir, "index.html"))
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa_routes(full_path: str):
+        """Catch all for React Router"""
+        # If it's an API route, let it pass through
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("health"):
+            raise HTTPException(status_code=404, detail="Not found")
+        
+        # Check if file exists in static directory
+        file_path = os.path.join(static_dir, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # Otherwise serve index.html for React Router
+        return FileResponse(os.path.join(static_dir, "index.html"))
+else:
+    # Development mode - just show API info
+    @app.get("/")
+    async def root():
+        """API root endpoint"""
+        return {
+            "name": "AI Initiatives Inventory API",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "health": "/health"
+        }
 
 if __name__ == "__main__":
     import uvicorn

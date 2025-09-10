@@ -1,5 +1,10 @@
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { 
+  Container, Paper, Title, Text, Badge, Button, 
+  Grid, Group, Stack, Anchor, Divider
+} from '@mantine/core';
+import { IconArrowLeft, IconEdit } from '@tabler/icons-react';
 import { useInitiatives } from '../../contexts/InitiativesContext';
 
 const InitiativeDetail: React.FC = () => {
@@ -14,180 +19,220 @@ const InitiativeDetail: React.FC = () => {
 
   if (!initiative) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Initiative not found</h1>
-        <Link
-          to="/initiatives"
-          className="text-primary-600 hover:text-primary-700 font-medium"
-        >
-          ← Back to initiatives
-        </Link>
-      </div>
+      <Container size="lg" py="xl">
+        <Paper p="xl" withBorder>
+          <Stack align="center" gap="md">
+            <Title order={2} c="dimmed">Initiative not found</Title>
+            <Anchor component={Link} to="/initiatives" size="sm">
+              <Group gap="xs">
+                <IconArrowLeft size={16} />
+                Back to initiatives
+              </Group>
+            </Anchor>
+          </Stack>
+        </Paper>
+      </Container>
     );
   }
 
-  const getStageColor = (stage: string) => {
-    switch (stage) {
+  const getStageColor = (stage: string): string => {
+    switch (stage?.toLowerCase()) {
       case 'idea':
-        return 'bg-gray-100 text-gray-800';
-      case 'proposal':
-        return 'bg-blue-100 text-blue-800';
+        return 'gray';
+      case 'discovery':
+        return 'blue';
+      case 'design':
+        return 'green';
+      case 'build':
+        return 'orange';
       case 'pilot':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'production':
-        return 'bg-green-100 text-green-800';
+        return 'pink';
+      case 'operational':
+        return 'red';
       case 'retired':
-        return 'bg-red-100 text-red-800';
+        return 'dark';
+      case 'paused':
+        return 'yellow';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'gray';
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Link
-            to="/initiatives"
-            className="text-primary-600 hover:text-primary-700 font-medium mb-2 inline-block"
+    <Container size="lg" py="md">
+      <Stack gap="lg">
+        {/* Header */}
+        <Group justify="space-between" align="flex-start">
+          <Stack gap="sm">
+            <Anchor component={Link} to="/initiatives" size="sm">
+              <Group gap="xs">
+                <IconArrowLeft size={16} />
+                Back to initiatives
+              </Group>
+            </Anchor>
+            <Title order={1} size="2rem">{initiative.title}</Title>
+          </Stack>
+          <Button
+            component={Link}
+            to={`/initiatives/${initiative.id}/edit`}
+            leftSection={<IconEdit size={16} />}
+            variant="filled"
           >
-            ← Back to initiatives
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">{initiative.title}</h1>
-        </div>
-        <Link
-          to={`/initiatives/${initiative.id}/edit`}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
-        >
-          Edit Initiative
-        </Link>
-      </div>
+            Edit Initiative
+          </Button>
+        </Group>
 
-      {/* Overview Card */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Stage</h3>
-            <span className={`mt-1 inline-flex px-2 py-1 text-sm font-semibold rounded-full ${getStageColor(initiative.stage)}`}>
-              {initiative.stage}
-            </span>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Program Owner</h3>
-            <p className="mt-1 text-sm text-gray-900">{initiative.program_owner}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Department</h3>
-            <p className="mt-1 text-sm text-gray-900">{initiative.department}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Executive Champion</h3>
-            <p className="mt-1 text-sm text-gray-900">{initiative.executive_champion}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Created</h3>
-            <p className="mt-1 text-sm text-gray-900">
-              {new Date(initiative.created_at).toLocaleDateString()}
-            </p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Last Updated</h3>
-            <p className="mt-1 text-sm text-gray-900">
-              {new Date(initiative.updated_at).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
+        {/* Overview Card */}
+        <Paper p="xl" withBorder>
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Stage</Text>
+                <Badge color={getStageColor(initiative.stage)} variant="light" size="lg">
+                  {initiative.stage}
+                </Badge>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Program Owner</Text>
+                <Text size="sm">{initiative.program_owner}</Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Department</Text>
+                <Text size="sm">{initiative.department}</Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Executive Champion</Text>
+                <Text size="sm">{initiative.executive_champion}</Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Created</Text>
+                <Text size="sm">
+                  {new Date(initiative.created_at).toLocaleDateString()}
+                </Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Last Updated</Text>
+                <Text size="sm">
+                  {new Date(initiative.updated_at).toLocaleDateString()}
+                </Text>
+              </Stack>
+            </Grid.Col>
+          </Grid>
+        </Paper>
 
-      {/* Content Sections */}
-      <div className="grid grid-cols-1 gap-6">
         {/* Background & Goals */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Background & Goals</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Background</h3>
-              <p className="text-sm text-gray-900">{initiative.background || 'Not specified'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Goal</h3>
-              <p className="text-sm text-gray-900">{initiative.goal || 'Not specified'}</p>
-            </div>
-          </div>
-        </div>
+        <Paper p="xl" withBorder>
+          <Title order={2} size="lg" mb="lg">Background & Goals</Title>
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Background</Text>
+                <Text size="sm">{initiative.background || 'Not specified'}</Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Goal</Text>
+                <Text size="sm">{initiative.goal || 'Not specified'}</Text>
+              </Stack>
+            </Grid.Col>
+          </Grid>
+        </Paper>
 
         {/* Technical Approach */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Technical Approach</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Workflow Approach</h3>
-              <p className="text-sm text-gray-900">{initiative.approach_workflow || 'Not specified'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Technical Implementation</h3>
-              <p className="text-sm text-gray-900">{initiative.approach_technical || 'Not specified'}</p>
-            </div>
-          </div>
+        <Paper p="xl" withBorder>
+          <Title order={2} size="lg" mb="lg">Technical Approach</Title>
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Workflow Approach</Text>
+                <Text size="sm">{initiative.approach_workflow || 'Not specified'}</Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={500} c="dimmed">Technical Implementation</Text>
+                <Text size="sm">{initiative.approach_technical || 'Not specified'}</Text>
+              </Stack>
+            </Grid.Col>
+          </Grid>
           {initiative.ai_components && initiative.ai_components.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">AI Components</h3>
-              <div className="flex flex-wrap gap-2">
-                {initiative.ai_components.map((component, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-800"
-                  >
-                    {component}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <>
+              <Divider my="md" />
+              <Stack gap="sm">
+                <Text size="sm" fw={500} c="dimmed">AI Components</Text>
+                <Group gap="xs">
+                  {initiative.ai_components.map((component, index) => (
+                    <Badge
+                      key={index}
+                      variant="light"
+                      color="blue"
+                      size="sm"
+                    >
+                      {component}
+                    </Badge>
+                  ))}
+                </Group>
+              </Stack>
+            </>
           )}
-        </div>
+        </Paper>
 
         {/* Risk & Governance */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Risk & Governance</h2>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Risk Assessment</h3>
-              <p className="text-sm text-gray-900">{initiative.risks || 'Not specified'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Equity Considerations</h3>
-              <p className="text-sm text-gray-900">{initiative.equity_considerations || 'Not specified'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Benefits</h3>
-              <p className="text-sm text-gray-900">{initiative.benefits || 'Not specified'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Success Metrics</h3>
-              <p className="text-sm text-gray-900">{initiative.success_metrics || 'Not specified'}</p>
-            </div>
-          </div>
-        </div>
+        <Paper p="xl" withBorder>
+          <Title order={2} size="lg" mb="lg">Risk & Governance</Title>
+          <Stack gap="lg">
+            <Stack gap="xs">
+              <Text size="sm" fw={500} c="dimmed">Risk Assessment</Text>
+              <Text size="sm">{initiative.risks || 'Not specified'}</Text>
+            </Stack>
+            <Stack gap="xs">
+              <Text size="sm" fw={500} c="dimmed">Equity Considerations</Text>
+              <Text size="sm">{initiative.equity_considerations || 'Not specified'}</Text>
+            </Stack>
+            <Stack gap="xs">
+              <Text size="sm" fw={500} c="dimmed">Benefits</Text>
+              <Text size="sm">{initiative.benefits || 'Not specified'}</Text>
+            </Stack>
+            <Stack gap="xs">
+              <Text size="sm" fw={500} c="dimmed">Success Metrics</Text>
+              <Text size="sm">{initiative.success_metrics || 'Not specified'}</Text>
+            </Stack>
+          </Stack>
+        </Paper>
 
         {/* Vendor Information */}
         {(initiative.vendor_type || initiative.vendors) && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Vendor Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Vendor Type</h3>
-                <p className="text-sm text-gray-900">{initiative.vendor_type || 'Not specified'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Vendors</h3>
-                <p className="text-sm text-gray-900">{initiative.vendors || 'Not specified'}</p>
-              </div>
-            </div>
-          </div>
+          <Paper p="xl" withBorder>
+            <Title order={2} size="lg" mb="lg">Vendor Information</Title>
+            <Grid>
+              <Grid.Col span={{ base: 12, md: 6 }}>
+                <Stack gap="xs">
+                  <Text size="sm" fw={500} c="dimmed">Vendor Type</Text>
+                  <Text size="sm">{initiative.vendor_type || 'Not specified'}</Text>
+                </Stack>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, md: 6 }}>
+                <Stack gap="xs">
+                  <Text size="sm" fw={500} c="dimmed">Vendors</Text>
+                  <Text size="sm">{initiative.vendors || 'Not specified'}</Text>
+                </Stack>
+              </Grid.Col>
+            </Grid>
+          </Paper>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Container>
   );
 };
 

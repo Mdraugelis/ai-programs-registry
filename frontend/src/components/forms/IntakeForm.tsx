@@ -18,7 +18,6 @@ import {
   Loader,
   Alert,
   Badge,
-  ActionIcon,
   Box
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';

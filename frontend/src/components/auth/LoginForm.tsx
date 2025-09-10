@@ -97,15 +97,15 @@ const LoginForm: React.FC = () => {
         <Stack gap="xs">
           <Group justify="space-between">
             <Text size="sm" fw={500}>Admin:</Text>
-            <Code size="sm">admin / admin123</Code>
+            <Code>admin / admin123</Code>
           </Group>
           <Group justify="space-between">
             <Text size="sm" fw={500}>Reviewer:</Text>
-            <Code size="sm">reviewer / review123</Code>
+            <Code>reviewer / review123</Code>
           </Group>
           <Group justify="space-between">
             <Text size="sm" fw={500}>Contributor:</Text>
-            <Code size="sm">contributor / contrib123</Code>
+            <Code>contributor / contrib123</Code>
           </Group>
         </Stack>
       </Paper>

@@ -6,8 +6,6 @@ import {
   Stack,
   Group,
   ActionIcon,
-  ScrollArea,
-  Center,
   Button,
   Divider,
 } from '@mantine/core';
@@ -48,7 +46,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const [showSetup, setShowSetup] = React.useState(false);
   const [showSettings, setShowSettings] = React.useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

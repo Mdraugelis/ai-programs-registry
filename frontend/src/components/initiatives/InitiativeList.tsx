@@ -1,18 +1,20 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Stack, Title, Text, Button, Group, Select, Alert, Center, Loader
+  Stack, Title, Text, Button, Group, Select, Alert, Center, Loader, ActionIcon
 } from '@mantine/core';
-import { IconPlus, IconAlertCircle } from '@tabler/icons-react';
+import { IconPlus, IconAlertCircle, IconMessageCircle } from '@tabler/icons-react';
 import { useInitiatives } from '../../contexts/InitiativesContext';
 import { useFilters } from '../../contexts/FiltersContext';
 import type { Initiative } from '../../types/initiative';
 import InitiativeTable from './InitiativeTable';
 import Pagination from './Pagination';
+import AIChatPanel from '../chat/AIChatPanel';
 
 const InitiativeList: React.FC = () => {
   const { initiatives, isLoading, error, fetchInitiatives } = useInitiatives();
   const { filters, pagination, sort, updatePagination } = useFilters();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     fetchInitiatives();
@@ -94,7 +96,8 @@ const InitiativeList: React.FC = () => {
   }
 
   return (
-    <Stack gap="lg">
+    <div style={{ marginRight: isChatOpen ? '30%' : 0, transition: 'margin-right 0.3s ease' }}>
+      <Stack gap="lg">
       {/* Header */}
       <Group justify="space-between">
         <div>
@@ -111,6 +114,15 @@ const InitiativeList: React.FC = () => {
           Showing {paginatedInitiatives.length} of {filteredAndSortedInitiatives.length} initiatives
         </Text>
         <Group gap="xs">
+          <ActionIcon
+            variant={isChatOpen ? "filled" : "subtle"}
+            color="blue"
+            size="lg"
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            title="AI Chat Assistant"
+          >
+            <IconMessageCircle size={18} />
+          </ActionIcon>
           <Text size="sm" c="dimmed">Show:</Text>
           <Select
             value={pagination.pageSize.toString()}
@@ -142,7 +154,15 @@ const InitiativeList: React.FC = () => {
       {filteredAndSortedInitiatives.length > pagination.pageSize && (
         <Pagination />
       )}
-    </Stack>
+      
+      {/* AI Chat Panel */}
+      <AIChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        initiativeIds={paginatedInitiatives.map(init => init.id)}
+      />
+      </Stack>
+    </div>
   );
 };
 

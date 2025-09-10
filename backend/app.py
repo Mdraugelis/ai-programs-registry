@@ -10,11 +10,16 @@ from database import execute_query, execute_one, execute_insert, execute_update
 from models import (
     Initiative, InitiativeCreate, InitiativeUpdate,
     Document, DocumentCreate,
-    Token, LoginRequest
+    Token, LoginRequest,
+    ChatRequest, ChatResponse, ChatSetupRequest, ChatStatusResponse
 )
 from auth import (
     authenticate_user, create_access_token, get_current_active_user,
     ACCESS_TOKEN_EXPIRE_MINUTES, require_role
+)
+from chat import (
+    validate_claude_api_key, store_user_api_key, get_user_api_key,
+    delete_user_api_key, process_chat_query
 )
 
 app = FastAPI(title="AI Initiatives Inventory API", version="1.0.0")
@@ -293,6 +298,71 @@ async def export_initiatives_csv(
     output.close()
     
     return response
+
+# Chat endpoints
+
+@app.post("/api/chat/setup")
+async def setup_claude_api_key(
+    request: ChatSetupRequest,
+    current_user = Depends(get_current_active_user)
+):
+    """Setup user's Claude API key"""
+    # Validate the API key
+    if not validate_claude_api_key(request.api_key):
+        raise HTTPException(status_code=400, detail="Invalid Claude API key")
+    
+    # Store the encrypted key
+    if not store_user_api_key(current_user["username"], request.api_key):
+        raise HTTPException(status_code=500, detail="Failed to store API key")
+    
+    return {"status": "connected", "model": "claude-3-5-sonnet-20240620"}
+
+@app.get("/api/chat/status", response_model=ChatStatusResponse)
+async def get_chat_status(current_user = Depends(get_current_active_user)):
+    """Check if user has Claude API key configured"""
+    api_key = get_user_api_key(current_user["username"])
+    has_key = api_key is not None
+    
+    return {
+        "connected": has_key,
+        "needs_setup": not has_key,
+        "model": "claude-3-5-sonnet-20240620" if has_key else None
+    }
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_with_claude(
+    request: ChatRequest,
+    current_user = Depends(get_current_active_user)
+):
+    """Process chat query using user's Claude API key"""
+    # Get initiatives context if IDs provided
+    initiatives = []
+    if request.initiative_ids:
+        id_placeholders = ','.join(['?'] * len(request.initiative_ids))
+        initiatives = execute_query(
+            f"SELECT * FROM initiatives WHERE id IN ({id_placeholders}) AND status != 'deleted'",
+            request.initiative_ids
+        )
+        initiatives = [dict(init) for init in initiatives]
+    
+    # Process the chat query
+    result = process_chat_query(current_user["username"], request.query, initiatives)
+    
+    if "error" in result:
+        if "API key" in result["error"]:
+            raise HTTPException(status_code=403, detail=result["error"])
+        else:
+            raise HTTPException(status_code=500, detail=result["error"])
+    
+    return {"response": result["response"]}
+
+@app.delete("/api/chat/disconnect")
+async def disconnect_claude(current_user = Depends(get_current_active_user)):
+    """Remove user's Claude API key"""
+    if not delete_user_api_key(current_user["username"]):
+        raise HTTPException(status_code=500, detail="Failed to remove API key")
+    
+    return {"status": "disconnected"}
 
 # Health check
 @app.get("/health")

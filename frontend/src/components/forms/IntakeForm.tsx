@@ -21,9 +21,8 @@ import {
   ActionIcon,
   Box
 } from '@mantine/core';
-import { useForm as useMantineForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconDeviceFloppy, IconX, IconCheck, IconChevronDown } from '@tabler/icons-react';
+import { IconAlertCircle, IconDeviceFloppy, IconX, IconCheck } from '@tabler/icons-react';
 import { useInitiatives } from '../../contexts/InitiativesContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { departments, aiComponents, stages } from '../../services/mockData';

@@ -25,7 +25,7 @@ interface HeaderProps {
   isSidebarOpen: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSidebarToggle, onMobileToggle, isSidebarOpen }) => {
+const Header: React.FC<HeaderProps> = ({ onSidebarToggle, onMobileToggle }) => {
   const { user, logout } = useAuth();
   const isDesktop = useMatches({
     base: false,
@@ -52,7 +52,8 @@ const Header: React.FC<HeaderProps> = ({ onSidebarToggle, onMobileToggle, isSide
           <IconMenu2 style={{ width: rem(20), height: rem(20) }} />
         </ActionIcon>
         
-        <Group gap="xs" component={Link} to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Group gap="xs">
           <Avatar
             size={32}
             radius="sm"
@@ -64,7 +65,8 @@ const Header: React.FC<HeaderProps> = ({ onSidebarToggle, onMobileToggle, isSide
           <Text size="xl" fw={700} c="dark">
             AI Atlas
           </Text>
-        </Group>
+          </Group>
+        </Link>
       </Group>
 
       <Group gap="md" visibleFrom="md">

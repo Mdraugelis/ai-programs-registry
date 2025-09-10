@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
-  Stack, Title, Text, Button, Group, Select, Alert, Center, Loader, ActionIcon
+  Stack, Title, Text, Group, Select, Alert, Center, Loader, ActionIcon
 } from '@mantine/core';
-import { IconPlus, IconAlertCircle, IconMessageCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconMessageCircle } from '@tabler/icons-react';
 import { useInitiatives } from '../../contexts/InitiativesContext';
 import { useFilters } from '../../contexts/FiltersContext';
 import type { Initiative } from '../../types/initiative';

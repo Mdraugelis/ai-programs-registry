@@ -11,7 +11,6 @@ import {
   ScrollArea,
   Center,
   Stack,
-  Button,
   UnstyledButton,
   rem
 } from '@mantine/core';

@@ -4,7 +4,7 @@ FROM node:18-slim as frontend-builder
 # Install frontend dependencies and build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 COPY frontend/ ./
 RUN npm run build
@@ -22,9 +22,9 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy backend requirements and install Python dependencies
-COPY backend/requirements.txt ./backend/
-RUN pip install --no-cache-dir -r backend/requirements.txt
+# Copy requirements and install Python dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
 COPY backend/ ./backend/
@@ -35,12 +35,16 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Initialize database
-WORKDIR /app/backend
-RUN python init_db.py
+# Copy and make start script executable
+COPY start.sh ./
+RUN chmod +x start.sh
 
-# Expose port
-EXPOSE $PORT
+# Initialize database (only for SQLite, skipped in production)
+WORKDIR /app/backend
+RUN python init_db.py || true
+
+# Expose port (Railway will set PORT env var)
+EXPOSE 8000
 
 # Start command
-CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port $PORT"]
+CMD ["/app/start.sh"]

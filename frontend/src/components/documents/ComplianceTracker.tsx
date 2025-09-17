@@ -30,7 +30,7 @@ import {
   IconCalendar,
   IconTarget
 } from '@tabler/icons-react';
-import { DocumentRequirement, ComplianceStatus } from '../../types/document';
+import type { DocumentRequirement, ComplianceStatus } from '../../types/document';
 
 interface ComplianceTrackerProps {
   initiativeId: number;
@@ -134,13 +134,13 @@ const ComplianceTracker: React.FC<ComplianceTrackerProps> = ({ initiativeId }) =
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
       link.download = `compliance-report-initiative-${initiativeId}.pdf`;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate report');
     }

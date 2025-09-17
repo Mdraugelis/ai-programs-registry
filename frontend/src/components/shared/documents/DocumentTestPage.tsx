@@ -30,29 +30,29 @@ const DocumentTestPage: React.FC = () => {
     console.log('Files dropped:', files);
   };
 
-  const handleDownload = (document: Document) => {
-    console.log('Download document:', document.filename);
+  const handleDownload = (doc: Document) => {
+    console.log('Download document:', doc.filename);
   };
 
-  const handlePreview = (document: Document) => {
-    console.log('Preview document:', document.filename);
+  const handlePreview = (doc: Document) => {
+    console.log('Preview document:', doc.filename);
     setPreviewOpen(true);
   };
 
-  const handleEdit = (document: Document) => {
-    console.log('Edit document:', document.filename);
+  const handleEdit = (doc: Document) => {
+    console.log('Edit document:', doc.filename);
   };
 
-  const handleDelete = (document: Document) => {
-    console.log('Delete document:', document.filename);
+  const handleDelete = (doc: Document) => {
+    console.log('Delete document:', doc.filename);
   };
 
-  const handleArchive = (document: Document) => {
-    console.log('Archive document:', document.filename);
+  const handleArchive = (doc: Document) => {
+    console.log('Archive document:', doc.filename);
   };
 
-  const handleRestore = (document: Document) => {
-    console.log('Restore document:', document.filename);
+  const handleRestore = (doc: Document) => {
+    console.log('Restore document:', doc.filename);
   };
 
   return (

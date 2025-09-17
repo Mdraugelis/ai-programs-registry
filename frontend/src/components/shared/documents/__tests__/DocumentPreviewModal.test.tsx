@@ -259,8 +259,8 @@ describe('DocumentPreviewModal', () => {
       ]
 
       testCases.forEach(({ size, expected }) => {
-        const document = createMockDocument({ file_size: size })
-        render(<DocumentPreviewModal {...defaultProps} document={document} />)
+        const doc = createMockDocument({ file_size: size })
+        render(<DocumentPreviewModal {...defaultProps} document={doc} />)
         
         expect(screen.getByText(expected)).toBeInTheDocument()
       })
@@ -278,8 +278,8 @@ describe('DocumentPreviewModal', () => {
       ]
 
       testCases.forEach(({ filename, expected }) => {
-        const document = createMockDocument({ filename })
-        render(<DocumentPreviewModal {...defaultProps} document={document} />)
+        const doc = createMockDocument({ filename })
+        render(<DocumentPreviewModal {...defaultProps} document={doc} />)
         
         if (expected) {
           expect(screen.getByText(expected)).toBeInTheDocument()
@@ -290,11 +290,11 @@ describe('DocumentPreviewModal', () => {
 
   describe('Date Formatting', () => {
     it('formats upload date correctly', () => {
-      const document = createMockDocument({
+      const doc = createMockDocument({
         upload_date: '2024-01-15T14:30:00Z'
       })
 
-      render(<DocumentPreviewModal {...defaultProps} document={document} />)
+      render(<DocumentPreviewModal {...defaultProps} document={doc} />)
       
       // Should display formatted date
       expect(screen.getByText(/Jan 15, 2024/)).toBeInTheDocument()

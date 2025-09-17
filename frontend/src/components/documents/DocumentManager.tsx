@@ -29,7 +29,7 @@ import {
   DocumentDropZone, 
   DocumentActionsMenu 
 } from '../shared/documents';
-import { Document, DocumentUploadRequest } from '../../types/document';
+import type { Document, DocumentUploadRequest } from '../../types/document';
 
 interface DocumentManagerProps {
   initiativeId?: number;
@@ -128,39 +128,39 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     }
   };
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const response = await fetch(`http://localhost:8000/documents/${document.id}`);
+      const response = await fetch(`http://localhost:8000/documents/${doc.id}`);
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
-      link.download = document.filename;
-      document.body.appendChild(link);
+      link.download = doc.filename;
+      window.document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
     } catch (err) {
       console.error('Download error:', err);
       setError(err instanceof Error ? err.message : 'Download failed');
     }
   };
 
-  const handlePreview = (document: Document) => {
-    setPreviewDocument(document);
+  const handlePreview = (doc: Document) => {
+    setPreviewDocument(doc);
   };
 
-  const handleEdit = (document: Document) => {
-    console.log('Edit document:', document.filename);
+  const handleEdit = (doc: Document) => {
+    console.log('Edit document:', doc.filename);
   };
 
-  const handleDelete = async (document: Document) => {
+  const handleDelete = async (doc: Document) => {
     try {
-      const response = await fetch(`http://localhost:8000/documents/${document.id}`, {
+      const response = await fetch(`http://localhost:8000/documents/${doc.id}`, {
         method: 'DELETE'
       });
 
@@ -175,9 +175,9 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     }
   };
 
-  const handleArchive = async (document: Document) => {
+  const handleArchive = async (doc: Document) => {
     try {
-      const response = await fetch(`http://localhost:8000/documents/${document.id}`, {
+      const response = await fetch(`http://localhost:8000/documents/${doc.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'archived' })
@@ -194,9 +194,9 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     }
   };
 
-  const handleRestore = async (document: Document) => {
+  const handleRestore = async (doc: Document) => {
     try {
-      const response = await fetch(`http://localhost:8000/documents/${document.id}`, {
+      const response = await fetch(`http://localhost:8000/documents/${doc.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'active' })

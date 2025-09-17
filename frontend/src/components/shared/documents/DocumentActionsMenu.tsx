@@ -24,7 +24,7 @@ import {
 import type { DocumentActionsMenuProps } from '../../../types/document';
 
 const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({
-  document,
+  document: currentDocument,
   onDownload,
   onPreview,
   onEdit,
@@ -38,80 +38,80 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({
 
   const canEdit = () => {
     if (userRole === 'admin') return true;
-    if (userRole === 'reviewer' && document.library_type !== 'admin') return true;
-    if (userRole === 'contributor' && document.library_type === 'ancillary') return true;
+    if (userRole === 'reviewer' && currentDocument.library_type !== 'admin') return true;
+    if (userRole === 'contributor' && currentDocument.library_type === 'ancillary') return true;
     return false;
   };
 
   const canDelete = () => {
     if (userRole === 'admin') return true;
-    if (userRole === 'reviewer' && document.library_type !== 'admin') return true;
+    if (userRole === 'reviewer' && currentDocument.library_type !== 'admin') return true;
     return false;
   };
 
   const canArchive = () => {
-    return canDelete() && document.status === 'active';
+    return canDelete() && currentDocument.status === 'active';
   };
 
   const canRestore = () => {
-    return canDelete() && document.status === 'archived';
+    return canDelete() && currentDocument.status === 'archived';
   };
 
   const handleDownload = () => {
     if (onDownload) {
-      onDownload(document);
+      onDownload(currentDocument);
     } else {
       // Default download behavior
-      const downloadUrl = `/api/documents/${document.id}`;
-      const link = document.createElement('a');
+      const downloadUrl = `/api/documents/${currentDocument.id}`;
+      const link = window.document.createElement('a');
       link.href = downloadUrl;
-      link.download = document.filename;
-      document.body.appendChild(link);
+      link.download = currentDocument.filename;
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
     }
   };
 
   const handlePreview = () => {
     if (onPreview) {
-      onPreview(document);
+      onPreview(currentDocument);
     }
   };
 
   const handleEdit = () => {
     if (onEdit) {
-      onEdit(document);
+      onEdit(currentDocument);
     }
   };
 
   const handleCopyLink = () => {
-    const documentUrl = `${window.location.origin}/api/documents/${document.id}`;
+    const documentUrl = `${window.location.origin}/api/documents/${currentDocument.id}`;
     navigator.clipboard.writeText(documentUrl);
     // You might want to show a notification here
   };
 
   const handleViewHistory = () => {
     // Implement version history viewing
-    console.log('View history for document:', document.id);
+    console.log('View history for document:', currentDocument.id);
   };
 
   const handleDeleteConfirm = () => {
     if (onDelete) {
-      onDelete(document);
+      onDelete(currentDocument);
     }
     setDeleteConfirmOpen(false);
   };
 
   const handleArchiveConfirm = () => {
     if (onArchive) {
-      onArchive(document);
+      onArchive(currentDocument);
     }
     setArchiveConfirmOpen(false);
   };
 
   const handleRestore = () => {
     if (onRestore) {
-      onRestore(document);
+      onRestore(currentDocument);
     }
   };
 
@@ -194,7 +194,7 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({
             </>
           )}
 
-          {canDelete() && document.status !== 'deleted' && (
+          {canDelete() && currentDocument.status !== 'deleted' && (
             <>
               <Menu.Divider />
               <Menu.Item
@@ -230,10 +230,10 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({
 
           <Stack gap="xs">
             <Text size="sm" fw={500}>Document Details:</Text>
-            <Text size="sm" c="dimmed">Name: {document.filename}</Text>
-            <Text size="sm" c="dimmed">Type: {document.library_type}</Text>
-            {document.category && (
-              <Text size="sm" c="dimmed">Category: {document.category}</Text>
+            <Text size="sm" c="dimmed">Name: {currentDocument.filename}</Text>
+            <Text size="sm" c="dimmed">Type: {currentDocument.library_type}</Text>
+            {currentDocument.category && (
+              <Text size="sm" c="dimmed">Category: {currentDocument.category}</Text>
             )}
           </Stack>
 
@@ -276,10 +276,10 @@ const DocumentActionsMenu: React.FC<DocumentActionsMenuProps> = ({
 
           <Stack gap="xs">
             <Text size="sm" fw={500}>Document Details:</Text>
-            <Text size="sm" c="dimmed">Name: {document.filename}</Text>
-            <Text size="sm" c="dimmed">Type: {document.library_type}</Text>
-            {document.category && (
-              <Text size="sm" c="dimmed">Category: {document.category}</Text>
+            <Text size="sm" c="dimmed">Name: {currentDocument.filename}</Text>
+            <Text size="sm" c="dimmed">Type: {currentDocument.library_type}</Text>
+            {currentDocument.category && (
+              <Text size="sm" c="dimmed">Category: {currentDocument.category}</Text>
             )}
           </Stack>
 

@@ -1,13 +1,23 @@
 # Multi-stage build for production
-FROM node:18-slim as frontend-builder
+FROM node:20-slim AS frontend-builder
+
+ARG SKIP_FRONTEND_BUILD=false
 
 # Install frontend dependencies and build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN if [ "$SKIP_FRONTEND_BUILD" = "true" ]; then \
+      echo "Skipping npm ci for frontend build"; \
+    else \
+      npm ci; \
+    fi
 
 COPY frontend/ ./
-RUN npm run build
+RUN if [ "$SKIP_FRONTEND_BUILD" = "true" ]; then \
+      echo "Skipping npm run build; using existing dist"; \
+    else \
+      npm run build; \
+    fi
 
 # Python backend stage
 FROM python:3.11-slim

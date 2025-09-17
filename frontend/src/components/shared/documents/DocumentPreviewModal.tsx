@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Modal, Paper, Text, Group, Button, Stack, Badge, ScrollArea, Center, Loader, Alert } from '@mantine/core';
 import { IconDownload, IconExternalLink, IconFileText, IconAlertTriangle } from '@tabler/icons-react';
 import { Document as PDFDocument, Page, pdfjs } from 'react-pdf';
-import type { Document as DocumentType, DocumentPreviewProps } from '../../../types/document';
+import type { DocumentPreviewProps } from '../../../types/document';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
-  document,
+  document: currentDocument,
   isOpen,
   onClose
 }) => {
@@ -31,10 +31,10 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
 
   const handleDownload = () => {
     // Create download URL for the document
-    const downloadUrl = `/api/documents/${document.id}`;
+    const downloadUrl = `/api/documents/${currentDocument.id}`;
     const link = window.document.createElement('a');
     link.href = downloadUrl;
-    link.download = document.filename;
+    link.download = currentDocument.filename;
     window.document.body.appendChild(link);
     link.click();
     window.document.body.removeChild(link);
@@ -42,7 +42,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
 
   const handleOpenExternal = () => {
     // Open document in new tab
-    const downloadUrl = `/api/documents/${document.id}`;
+    const downloadUrl = `/api/documents/${currentDocument.id}`;
     window.open(downloadUrl, '_blank');
   };
 
@@ -94,7 +94,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
         <Group gap="sm">
           <IconFileText size={20} />
           <Text size="lg" fw={600} truncate style={{ maxWidth: '400px' }}>
-            {document.filename}
+            {currentDocument.filename}
           </Text>
         </Group>
       }
@@ -107,18 +107,18 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
           <Stack gap="sm">
             <Group justify="space-between">
               <Group gap="sm">
-                <Badge color={getLibraryTypeColor(document.library_type)} variant="light">
-                  {document.library_type.toUpperCase()}
+                <Badge color={getLibraryTypeColor(currentDocument.library_type)} variant="light">
+                  {currentDocument.library_type.toUpperCase()}
                 </Badge>
-                <Badge color={getStatusColor(document.status)} variant="outline">
-                  {document.status}
+                <Badge color={getStatusColor(currentDocument.status)} variant="outline">
+                  {currentDocument.status}
                 </Badge>
-                {document.is_required && (
+                {currentDocument.is_required && (
                   <Badge color="red" variant="light">
                     Required
                   </Badge>
                 )}
-                {document.is_template && (
+                {currentDocument.is_template && (
                   <Badge color="yellow" variant="light">
                     Template
                   </Badge>
@@ -145,42 +145,42 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
             </Group>
 
             <Group gap="xl">
-              {document.file_size && (
+              {currentDocument.file_size && (
                 <div>
                   <Text size="xs" c="dimmed">File Size</Text>
-                  <Text size="sm">{formatFileSize(document.file_size)}</Text>
+                  <Text size="sm">{formatFileSize(currentDocument.file_size)}</Text>
                 </div>
               )}
               <div>
                 <Text size="xs" c="dimmed">Version</Text>
-                <Text size="sm">v{document.version}</Text>
+                <Text size="sm">v{currentDocument.version}</Text>
               </div>
-              {document.uploaded_by && (
+              {currentDocument.uploaded_by && (
                 <div>
                   <Text size="xs" c="dimmed">Uploaded By</Text>
-                  <Text size="sm">{document.uploaded_by}</Text>
+                  <Text size="sm">{currentDocument.uploaded_by}</Text>
                 </div>
               )}
               <div>
                 <Text size="xs" c="dimmed">Uploaded</Text>
                 <Text size="sm">
-                  {new Date(document.uploaded_at).toLocaleDateString()}
+                  {new Date(currentDocument.uploaded_at).toLocaleDateString()}
                 </Text>
               </div>
             </Group>
 
-            {document.description && (
+            {currentDocument.description && (
               <div>
                 <Text size="xs" c="dimmed">Description</Text>
-                <Text size="sm">{document.description}</Text>
+                <Text size="sm">{currentDocument.description}</Text>
               </div>
             )}
 
-            {document.tags && (
+            {currentDocument.tags && (
               <div>
                 <Text size="xs" c="dimmed">Tags</Text>
                 <Group gap="xs">
-                  {document.tags.split(',').map((tag, index) => (
+                  {currentDocument.tags.split(',').map((tag, index) => (
                     <Badge key={index} size="sm" variant="dot">
                       {tag.trim()}
                     </Badge>
@@ -196,7 +196,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
           <Stack gap="md">
             <Text size="sm" fw={500}>Document Preview</Text>
             
-            {isPDF(document.filename) ? (
+            {isPDF(currentDocument.filename) ? (
               <div>
                 {loading && (
                   <Center h={300}>
@@ -219,7 +219,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
                   <Stack gap="sm">
                     <ScrollArea style={{ height: '400px' }}>
                       <PDFDocument
-                        file={`/api/documents/${document.id}`}
+                        file={`/api/documents/${currentDocument.id}`}
                         onLoadSuccess={onDocumentLoadSuccess}
                         onLoadError={onDocumentLoadError}
                         loading={null}
@@ -259,11 +259,11 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
                   </Stack>
                 )}
               </div>
-            ) : isImage(document.filename) ? (
+            ) : isImage(currentDocument.filename) ? (
               <Center>
                 <img
-                  src={`/api/documents/${document.id}`}
-                  alt={document.filename}
+                  src={`/api/documents/${currentDocument.id}`}
+                  alt={currentDocument.filename}
                   style={{
                     maxWidth: '100%',
                     maxHeight: '400px',
@@ -281,7 +281,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewProps> = ({
                 title="Preview Not Available"
                 color="blue"
               >
-                Preview is not available for this file type ({getFileType(document.filename).toUpperCase()}).
+                Preview is not available for this file type ({getFileType(currentDocument.filename).toUpperCase()}).
                 You can download the file to view it.
               </Alert>
             )}

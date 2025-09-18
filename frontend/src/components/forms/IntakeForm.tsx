@@ -25,6 +25,9 @@ import { IconAlertCircle, IconDeviceFloppy, IconX, IconCheck } from '@tabler/ico
 import { useInitiatives } from '../../contexts/InitiativesContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { departments, aiComponents, stages } from '../../services/mockData';
+import AncillaryDocumentUpload from '../documents/AncillaryDocumentUpload';
+import AncillaryDocumentList from '../documents/AncillaryDocumentList';
+import type { AncillaryDocument } from '../../types/document';
 
 interface FormData {
   title: string;
@@ -60,6 +63,8 @@ const IntakeForm: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ancillaryDocuments, setAncillaryDocuments] = useState<AncillaryDocument[]>([]);
+  const [documentCount, setDocumentCount] = useState(0);
 
   const isEditing = Boolean(id);
   const existingInitiative = id ? getInitiative(id) : null;
@@ -170,8 +175,10 @@ const IntakeForm: React.FC = () => {
           color: 'green',
           icon: <IconCheck size={16} />
         });
+        // Stay on the same initiative detail page after update
+        navigate(`/initiatives/${existingInitiative.id}`);
       } else {
-        await createInitiative({
+        const newInitiative = await createInitiative({
           ...data,
           created_by: user.email
         });
@@ -182,8 +189,13 @@ const IntakeForm: React.FC = () => {
           color: 'green',
           icon: <IconCheck size={16} />
         });
+        // Navigate to the new initiative detail page
+        if (newInitiative && newInitiative.id) {
+          navigate(`/initiatives/${newInitiative.id}`);
+        } else {
+          navigate('/initiatives');
+        }
       }
-      navigate('/initiatives');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save initiative';
       setError(errorMessage);
@@ -211,6 +223,26 @@ const IntakeForm: React.FC = () => {
 
   const handleCancel = () => {
     navigate('/initiatives');
+  };
+
+  const handleDocumentUploadSuccess = (documents: AncillaryDocument[]) => {
+    setAncillaryDocuments(prev => [...prev, ...documents]);
+    setDocumentCount(prev => prev + documents.length);
+    notifications.show({
+      title: 'Documents Uploaded',
+      message: `${documents.length} document(s) uploaded successfully`,
+      color: 'green'
+    });
+  };
+
+  const handleDocumentDelete = (documentId: number) => {
+    setAncillaryDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    setDocumentCount(prev => prev - 1);
+  };
+
+  const refreshDocuments = () => {
+    // This will be handled by the AncillaryDocumentList component
+    // which will refetch documents from the API
   };
 
   if (isLoading && !getValues().title) {
@@ -566,6 +598,57 @@ const IntakeForm: React.FC = () => {
                       />
                     )}
                   />
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+
+            {/* Supporting Documents Section */}
+            <Accordion.Item value="documents">
+              <Accordion.Control>
+                <Group>
+                  <Title order={3}>Supporting Documents</Title>
+                  <Badge color="blue" size="sm">Optional</Badge>
+                  {documentCount > 0 && (
+                    <Badge color="green" size="sm" variant="light">
+                      {documentCount} document{documentCount !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </Group>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="lg">
+                  <Text size="sm" c="dimmed">
+                    Upload supporting materials like research papers, presentations, technical documentation, 
+                    training materials, and other resources related to this AI initiative. These documents 
+                    will help reviewers better understand your proposal.
+                  </Text>
+
+                  {isEditing && id && (
+                    <>
+                      {/* Document List for Existing Initiatives */}
+                      <AncillaryDocumentList 
+                        initiativeId={parseInt(id)}
+                        onDocumentDelete={handleDocumentDelete}
+                        compact={true}
+                      />
+                      
+                      {/* Upload Component for Existing Initiatives */}
+                      <AncillaryDocumentUpload
+                        initiativeId={parseInt(id)}
+                        onUploadSuccess={handleDocumentUploadSuccess}
+                        disabled={isLoading}
+                      />
+                    </>
+                  )}
+
+                  {!isEditing && (
+                    <Alert color="blue" variant="light">
+                      <Text size="sm">
+                        <strong>Note:</strong> Documents can be uploaded after the initiative is saved. 
+                        Complete the form and submit to enable document uploads.
+                      </Text>
+                    </Alert>
+                  )}
                 </Stack>
               </Accordion.Panel>
             </Accordion.Item>

@@ -239,6 +239,13 @@ class InitiativeBase(BaseModel):
     priority: Optional[str] = Field(None, pattern="^(low|medium|high|critical)$")
     lead_name: Optional[str] = None
     lead_email: Optional[str] = None
+    executive_champion: Optional[str] = None
+    vendor_type: Optional[str] = None
+    vendors: Optional[str] = None
+    ai_components: Optional[str] = None
+    success_metrics: Optional[str] = None
+    equity_considerations: Optional[str] = None
+    benefits: Optional[str] = None
     business_value: Optional[str] = None
     technical_approach: Optional[str] = None
     start_date: Optional[str] = None

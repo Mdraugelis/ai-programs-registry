@@ -6,6 +6,7 @@ import {
 } from '@mantine/core';
 import { IconArrowLeft, IconEdit } from '@tabler/icons-react';
 import { useInitiatives } from '../../contexts/InitiativesContext';
+import AncillaryDocumentList from '../documents/AncillaryDocumentList';
 
 const InitiativeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -231,6 +232,16 @@ const InitiativeDetail: React.FC = () => {
             </Grid>
           </Paper>
         )}
+
+        {/* Ancillary Documents */}
+        <Paper p="xl" withBorder>
+          <Title order={2} size="lg" mb="lg">Supporting Documents</Title>
+          <AncillaryDocumentList
+            initiativeId={parseInt(initiative.id)}
+            showActions={true}
+            compact={false}
+          />
+        </Paper>
       </Stack>
     </Container>
   );

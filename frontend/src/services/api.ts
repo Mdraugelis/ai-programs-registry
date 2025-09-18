@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Initiative, User } from '../types/initiative';
+import type { AncillaryDocument, Document, DocumentUploadRequest } from '../types/document';
 
 // API base URL - matches the backend server
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -65,6 +66,13 @@ interface BackendInitiativeCreate {
   priority?: 'low' | 'medium' | 'high' | 'critical';
   lead_name?: string;
   lead_email?: string;
+  executive_champion?: string;
+  vendor_type?: string;
+  vendors?: string;
+  ai_components?: string;
+  success_metrics?: string;
+  equity_considerations?: string;
+  benefits?: string;
   business_value?: string;
   technical_approach?: string;
   start_date?: string;
@@ -82,6 +90,13 @@ const mapToBackendInitiative = (initiative: Omit<Initiative, 'id' | 'created_at'
     priority: mapPriorityFromRisk(initiative.risks),
     lead_name: initiative.program_owner,
     lead_email: initiative.created_by,
+    executive_champion: initiative.executive_champion,
+    vendor_type: initiative.vendor_type,
+    vendors: initiative.vendors,
+    ai_components: initiative.ai_components ? initiative.ai_components.join(',') : undefined,
+    success_metrics: initiative.success_metrics,
+    equity_considerations: initiative.equity_considerations,
+    benefits: initiative.benefits,
     business_value: initiative.goal,
     technical_approach: `${initiative.approach_workflow || ''}\n\n${initiative.approach_technical || ''}`.trim(),
     start_date: undefined,
@@ -91,24 +106,24 @@ const mapToBackendInitiative = (initiative: Omit<Initiative, 'id' | 'created_at'
 };
 
 // Map backend initiative to frontend format
-const mapFromBackendInitiative = (backendInit: BackendInitiative): Initiative => {
+const mapFromBackendInitiative = (backendInit: any): Initiative => {
   return {
     id: backendInit.id.toString(),
     title: backendInit.name,
     program_owner: backendInit.lead_name || '',
-    executive_champion: '', // Not in backend schema
+    executive_champion: backendInit.executive_champion || '',
     department: backendInit.department || '',
-    vendor_type: undefined,
-    vendors: undefined,
+    vendor_type: backendInit.vendor_type,
+    vendors: backendInit.vendors,
     background: backendInit.description,
     goal: backendInit.business_value,
     approach_workflow: backendInit.technical_approach?.split('\n\n')[0] || '',
     approach_technical: backendInit.technical_approach?.split('\n\n')[1] || backendInit.technical_approach || '',
-    ai_components: [],
-    success_metrics: undefined,
-    equity_considerations: undefined,
+    ai_components: backendInit.ai_components ? backendInit.ai_components.split(',') : [],
+    success_metrics: backendInit.success_metrics,
+    equity_considerations: backendInit.equity_considerations,
     risks: mapPriorityToRisk(backendInit.priority),
-    benefits: undefined,
+    benefits: backendInit.benefits,
     stage: mapStageFromBackend(backendInit.stage),
     created_at: backendInit.created_at,
     updated_at: backendInit.updated_at,
@@ -247,6 +262,187 @@ export const initiativesAPI = {
   async delete(id: string): Promise<void> {
     await api.delete(`/api/initiatives/${id}`);
   },
+};
+
+// Ancillary Documents API
+export const ancillaryDocumentsAPI = {
+  async getByInitiative(initiativeId: number): Promise<AncillaryDocument[]> {
+    const response = await api.get(`/api/initiatives/${initiativeId}/documents`, {
+      params: { library_type: 'ancillary' }
+    });
+    return response.data.map((doc: any) => ({
+      ...doc,
+      library_type: 'ancillary' as const
+    }));
+  },
+
+  async upload(
+    initiativeId: number,
+    file: File,
+    metadata: {
+      description: string;
+      tags: string;
+      category: string;
+    }
+  ): Promise<AncillaryDocument> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('initiative_id', initiativeId.toString());
+    formData.append('document_type', metadata.category);
+    formData.append('description', metadata.description);
+    formData.append('tags', metadata.tags);
+
+    const response = await api.post(
+      `/api/initiatives/${initiativeId}/documents/ancillary`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+
+    return {
+      ...response.data,
+      library_type: 'ancillary' as const,
+      description: metadata.description,
+      tags: metadata.tags
+    };
+  },
+
+  async uploadMultiple(
+    initiativeId: number,
+    files: File[],
+    metadata: {
+      description: string;
+      tags: string;
+      category: string;
+    }
+  ): Promise<AncillaryDocument[]> {
+    const uploadPromises = files.map(file => 
+      this.upload(initiativeId, file, metadata)
+    );
+    return Promise.all(uploadPromises);
+  },
+
+  async download(documentId: number): Promise<Blob> {
+    const response = await api.get(`/api/documents/${documentId}`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  async delete(documentId: number): Promise<void> {
+    await api.delete(`/api/documents/${documentId}`);
+  },
+
+  async update(
+    documentId: number,
+    updates: {
+      description?: string;
+      tags?: string;
+      category?: string;
+    }
+  ): Promise<AncillaryDocument> {
+    const response = await api.put(`/api/documents/${documentId}`, updates);
+    return {
+      ...response.data,
+      library_type: 'ancillary' as const
+    };
+  },
+
+  async getById(documentId: number): Promise<AncillaryDocument> {
+    const response = await api.get(`/api/documents/${documentId}`);
+    return {
+      ...response.data,
+      library_type: 'ancillary' as const
+    };
+  }
+};
+
+// General Documents API (for all document types)
+export const documentsAPI = {
+  async getByInitiative(initiativeId: number, libraryType?: 'admin' | 'core' | 'ancillary'): Promise<Document[]> {
+    const response = await api.get(`/api/initiatives/${initiativeId}/documents`, {
+      params: libraryType ? { library_type: libraryType } : {}
+    });
+    return response.data;
+  },
+
+  async download(documentId: number): Promise<{ blob: Blob; filename: string }> {
+    const response = await api.get(`/api/documents/${documentId}`, {
+      responseType: 'blob'
+    });
+    
+    // Try to extract filename from Content-Disposition header
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = `document-${documentId}`;
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    return {
+      blob: response.data,
+      filename
+    };
+  },
+
+  async delete(documentId: number): Promise<void> {
+    await api.delete(`/api/documents/${documentId}`);
+  },
+
+  async uploadGeneric(
+    initiativeId: number,
+    file: File,
+    libraryType: 'admin' | 'core' | 'ancillary',
+    metadata?: DocumentUploadRequest
+  ): Promise<Document> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('initiative_id', initiativeId.toString());
+    
+    if (metadata?.document_type) {
+      formData.append('document_type', metadata.document_type);
+    }
+    if (metadata?.description) {
+      formData.append('description', metadata.description);
+    }
+    if (metadata?.tags) {
+      formData.append('tags', metadata.tags);
+    }
+    if (metadata?.category) {
+      formData.append('category', metadata.category);
+    }
+    if (metadata?.is_required !== undefined) {
+      formData.append('is_required', metadata.is_required.toString());
+    }
+
+    let endpoint: string;
+    switch (libraryType) {
+      case 'admin':
+        endpoint = '/api/admin/documents';
+        break;
+      case 'core':
+        endpoint = `/api/initiatives/${initiativeId}/documents/core`;
+        break;
+      case 'ancillary':
+        endpoint = `/api/initiatives/${initiativeId}/documents/ancillary`;
+        break;
+      default:
+        throw new Error('Invalid library type');
+    }
+
+    const response = await api.post(endpoint, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data;
+  }
 };
 
 // Export the api instance for direct use if needed

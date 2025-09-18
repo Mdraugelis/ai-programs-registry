@@ -98,3 +98,54 @@ export interface DocumentUploadRequest {
   tags?: string;
   is_required?: boolean;
 }
+
+// Ancillary document specific types
+export interface AncillaryDocument extends Document {
+  library_type: 'ancillary';
+  description: string;
+  tags: string;
+}
+
+export interface AncillaryDocumentCategory {
+  value: string;
+  label: string;
+  description?: string;
+  acceptedFileTypes?: string[];
+}
+
+export interface AncillaryDocumentUploadProps {
+  initiativeId?: number;
+  onUploadSuccess?: (documents: AncillaryDocument[]) => void;
+  onUploadError?: (error: string) => void;
+  disabled?: boolean;
+  showPreview?: boolean;
+}
+
+export interface AncillaryDocumentListProps {
+  initiativeId: number;
+  onDocumentSelect?: (document: AncillaryDocument) => void;
+  onDocumentUpdate?: (document: AncillaryDocument) => void;
+  onDocumentDelete?: (documentId: number) => void;
+  showActions?: boolean;
+  compact?: boolean;
+  searchable?: boolean;
+}
+
+export interface AncillaryDocumentMetadata {
+  description: string;
+  tags: string[];
+  category: string;
+  customTags?: string[];
+}
+
+export interface AncillaryDocumentFilter {
+  searchQuery?: string;
+  category?: string;
+  tags?: string[];
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  fileType?: string;
+  uploader?: string;
+}
